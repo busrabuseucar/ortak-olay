@@ -4,7 +4,7 @@ Bu paket başvuru fikrinin çalışan koordinatör arayüzü ve backend sürüm�
 
 ## Hazır olanlar
 
-Rapor kaydı, benzer kayıt önerileri, koordinatör onayı, yanlış bağlantıyı ayırma, ihtiyaç durumları ve işlem geçmişi. Veriler SQLite dosyasında korunur. 11 otomatik test ve çalışan sunucuya karşı örnek senaryo doğrulandı.
+Rapor kaydı, benzer kayıt önerileri, koordinatör onayı, yanlış bağlantıyı ayırma, ihtiyaç durumları ve işlem geçmişi. Veriler SQLite dosyasında korunur. Backend ve tarayıcı üzerinden iş akışı testleri bulunur. İsteğe bağlı yerel model Türkçe, İngilizce ve Yunanca metinler arasında benzerlik önerir.
 
 ## Bilgisayarda açma
 
@@ -23,8 +23,17 @@ Proje deposu: https://github.com/busrabuseucar/ortak-olay
 
 README kurulum adımlarını, ROADMAP geliştirme aşamalarını içerir. Otomatik test tanımı `.github/workflows/tests.yml` dosyasındadır; çalıştırma sonuçlarını GitHub Actions sekmesinden takip edebilirsin.
 
-## Sonraki çalışma
+## Çok dilli modeli açma
 
-Gelen raporlar, ihtiyaç ayrıntısı ve karar ekranları hazır. Sonraki aşama kaynak metne bağlı bilgi çıkarımı ve çok dilli anlamsal eşleştirme. Şimdiki eşleştirme, elle girilmiş konum ve kategori üzerinden çalışan açık bir kural tabanıdır; yapay zekâ başarısı olarak sunulmamalı.
+Aynı Python ortamında:
 
-Portföyünde bugün doğru ifade: “Ortak Olay için rapor yönetimi, insan onaylı eşleştirme ve izlenebilir ihtiyaç güncellemelerini içeren backend prototipi geliştiriyorum.” Gerçek kullanıcı doğrulaması ve saha kullanımı henüz yapılmadı.
+```sh
+python -m pip install -r requirements-ai.txt
+python scripts/run_local.py --semantic
+```
+
+İlk açılışta yaklaşık 220 MB model dosyası indirilir. Raporlar bilgisayarında işlenir. Model, benzer raporları kaynaklarıyla önerir; bağlantı ve durum değişikliği kararını sen verirsin. Puan doğruluk yüzdesi değildir. Farklı yer adlarını ve ihtiyacın güncel olup olmadığını mutlaka kaynaklardan kontrol et.
+
+18 yapay örnekte model eklemek daha fazla ilgili kaydı buldu, fakat yanlış adayları da artırdı. Bu nedenle varsayılan hâlâ konum/kategori kuralıdır. Ölçümün ayrıntıları `evaluation/README.md` dosyasında. Serbest metinden otomatik bilgi çıkarımı, bağımsız değerlendirme ve gerçek kullanıcı doğrulaması sonraki aşamalar.
+
+Portföyünde doğru ifade: “Ortak Olay için kaynak metinleri koruyan, insan onaylı ihtiyaç takibi ve yerel çok dilli benzerlik önerileri içeren bir prototip geliştiriyorum.” Saha kullanımı ve gerçek kullanıcı doğrulaması henüz yapılmadı.

@@ -9,6 +9,8 @@ import sqlite3
 from typing import Literal
 from uuid import uuid4
 
+from app.matching import LocalSemanticEncoder, suggest
+
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.responses import FileResponse
@@ -71,7 +73,10 @@ def now():
     return datetime.now(timezone.utc).isoformat()
 
 
-def create_app(db_path=None, reviewers=None):
+def create_app(db_path=None, reviewers=None, encoder=None):
+    mode = os.getenv("ORTAK_MATCHER", "baseline")
+    if mode not in {"baseline", "semantic"}:
+        raise RuntimeError("ORTAK_MATCHER must be baseline or semantic")
     db_path = db_path or os.getenv("ORTAK_DB", "data/ortak.db")
     reviewers = reviewers if reviewers is not None else json.loads(os.getenv("ORTAK_REVIEWERS", "{}"))
     if not isinstance(reviewers, dict) or not reviewers or any(
@@ -79,6 +84,8 @@ def create_app(db_path=None, reviewers=None):
         for k, v in reviewers.items()
     ):
         raise RuntimeError("Set ORTAK_REVIEWERS to a JSON object mapping secret tokens (24+ chars) to reviewer names.")
+    if encoder is None and mode == "semantic":
+        encoder = LocalSemanticEncoder()
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(db_path) as connection:
         connection.executescript(SCHEMA)
@@ -122,8 +129,8 @@ def create_app(db_path=None, reviewers=None):
         raise HTTPException(401, "Valid reviewer token required", headers={"WWW-Authenticate": "Bearer"})
 
     api = FastAPI(
-        title="Ortak Olay", version="0.2.0",
-        description="Synthetic-exercise prototype. Structured reports, baseline suggestions and human decisions. No trained AI model or operational validation.",
+        title="Ortak Olay", version="0.3.0",
+        description="Synthetic-exercise prototype. Structured reports, baseline suggestions and human decisions. Optional local multilingual model for candidate retrieval; no operational validation.",
     )
 
     static = Path(__file__).resolve().parent / "static"
@@ -146,7 +153,7 @@ def create_app(db_path=None, reviewers=None):
 
     @api.get("/health")
     def health():
-        return {"status": "ok", "version": "0.2.0", "stage": "local-prototype"}
+        return {"status": "ok", "version": "0.3.0", "stage": "local-prototype"}
 
     @api.post("/reports", status_code=201)
     def add_report(item: Report, actor=Depends(reviewer)):
@@ -187,30 +194,13 @@ def create_app(db_path=None, reviewers=None):
     def suggestions(report_id: str, actor=Depends(reviewer)):
         with database() as connection:
             report = get(connection, "reports", report_id)
-            candidates = []
+            groups = []
             for row in connection.execute("SELECT * FROM events WHERE need=?", (report["need"],)):
-                e = dict(row)
-                if e["id"] == report["event_id"] or e["location"].casefold() != report["location"].casefold():
-                    continue
-                linked = [dict(r) for r in connection.execute("SELECT * FROM reports WHERE event_id=?", (e["id"],))]
-                if not linked:
-                    continue
-                comparable = [r for r in linked if r["reported_at"] and report["reported_at"]]
-                if comparable and all(abs((datetime.fromisoformat(r["reported_at"]) - datetime.fromisoformat(report["reported_at"])).total_seconds()) > 86400 for r in comparable) and len(comparable) == len(linked):
-                    continue
-                flags = []
-                if any(r["quantity"] is not None and report["quantity"] is not None and r["unit"] == report["unit"] and r["quantity"] != report["quantity"] for r in linked):
-                    flags.append("quantity_conflict")
-                if any(r["unit"] != report["unit"] for r in linked):
-                    flags.append("unit_mismatch_or_unknown")
-                if not report["reported_at"] or any(not r["reported_at"] for r in linked):
-                    flags.append("unknown_event_time")
-                if any(r["text"] == report["text"] for r in linked):
-                    flags.append("possible_repost")
-                if e["status"] == "fulfilled":
-                    flags.append("fulfilled_need_requires_review")
-                candidates.append({"event_id": e["id"], "status": e["status"], "method": "structured-baseline-v1", "evidence_report_ids": [r["id"] for r in linked], "reasons": ["same_location_label", "same_need_category"], "flags": flags})
-            return {"report_id": report_id, "candidates": candidates, "automatic_linking": False}
+                event = dict(row)
+                linked = [dict(r) for r in connection.execute("SELECT * FROM reports WHERE event_id=?", (event["id"],))]
+                groups.append((event, linked))
+        # Release the database connection before model inference.
+        return suggest(report, groups, encoder=encoder)
 
     def new_event(connection, report, actor, reason, split=False):
         old = report["event_id"]

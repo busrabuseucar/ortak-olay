@@ -85,6 +85,11 @@ def test_coordinator_journey(server):
         water_id = page.locator('.record[aria-current=true]').get_attribute('data-select')
         add('Shelter A: 30 people need water.', quantity='30', unit='kişi', language='en')
         expect(page.locator('.flags')).to_contain_text('Miktarlar çelişiyor')
+        if os.getenv('ORTAK_MATCHER') == 'semantic':
+            expect(page.locator('#detail')).to_contain_text('Yerel çok dilli model')
+            expect(page.locator('.candidate')).to_contain_text('Benzerlik:')
+        else:
+            expect(page.locator('#detail')).to_contain_text('Anlamsal model etkin değil')
         screenshots = os.getenv('ORTAK_SCREENSHOTS')
         if screenshots:
             Path(screenshots).mkdir(parents=True, exist_ok=True)

@@ -10,9 +10,11 @@ Incoming-report, event-detail and review-decision views are implemented. Show or
 
 Acceptance: a reviewer completes the five-message scenario without invoking API endpoints manually. Record completion time and corrections without inventing performance improvements.
 
-## Milestone 2 — AI with measurable evidence
+## Milestone 2 — Local semantic retrieval implemented; independent evaluation pending
 
-Define a provider interface that returns extracted fields and exact source spans. Unknown facts must remain unknown. Add multilingual embeddings for candidate retrieval, retaining the structured baseline for comparison. Do not let model outputs call mutation endpoints or approve decisions.
+Implemented: optional local multilingual embeddings, source-linked similarity scores, explicit fallback, and an 18-pair synthetic development comparison in `evaluation/`. The comparison finds more intended matches but also more false candidates; default matching remains the baseline.
+
+Next: define a provider interface that returns extracted fields and exact source spans. Unknown facts must remain unknown. Improve location disambiguation and compare semantic retrieval with the retained structured baseline. Do not let model outputs call mutation endpoints or approve decisions.
 
 Build independently labelled TR/EL/EN exercise cases, reviewed by appropriate speakers. Partition by scenario family before tuning so reposts and translations do not leak across partitions. Include distinct shelters with similar names, different units, conflicting quantities, old reposts, negation and partial fulfilment. Report sample counts, precision, recall and false merges by language and scenario. Do not treat a small synthetic evaluation as real-world validation.
 

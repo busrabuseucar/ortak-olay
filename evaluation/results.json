@@ -1,0 +1,357 @@
+{
+  "created_at": "2026-09-18T17:51:35.522980+00:00",
+  "kind": "synthetic-development-check-not-held-out",
+  "labels": "author-defined; no independent or native-speaker review",
+  "model": {
+    "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "weights_repository": "qdrant/paraphrase-multilingual-MiniLM-L12-v2-onnx-Q",
+    "weights_revision": "faf4aa4225822f3bc6376869cb1164e8e3feedd0",
+    "pooling": "mean",
+    "onnxruntime_version": "1.30.0",
+    "numpy_version": "2.5.3",
+    "runtime": "fastembed",
+    "runtime_version": "0.8.0",
+    "input_token_limit": 512,
+    "inference": "local-cpu"
+  },
+  "threshold": 0.78,
+  "dataset_sha256": "7469bb1ff45338aa1320e40a1d905fe9e575b09f68e08b9a1c108fce77d7e704",
+  "overall": {
+    "baseline": {
+      "n": 18,
+      "tp": 4,
+      "fp": 2,
+      "fn": 5,
+      "tn": 7,
+      "precision": 0.6667,
+      "recall": 0.4444
+    },
+    "semantic_union": {
+      "n": 18,
+      "tp": 7,
+      "fp": 5,
+      "fn": 2,
+      "tn": 4,
+      "precision": 0.5833,
+      "recall": 0.7778
+    }
+  },
+  "by_language_pair": {
+    "tr-en": {
+      "baseline": {
+        "n": 5,
+        "tp": 1,
+        "fp": 1,
+        "fn": 2,
+        "tn": 1,
+        "precision": 0.5,
+        "recall": 0.3333
+      },
+      "semantic_union": {
+        "n": 5,
+        "tp": 2,
+        "fp": 1,
+        "fn": 1,
+        "tn": 1,
+        "precision": 0.6667,
+        "recall": 0.6667
+      }
+    },
+    "tr-el": {
+      "baseline": {
+        "n": 2,
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "tn": 1,
+        "precision": null,
+        "recall": 0.0
+      },
+      "semantic_union": {
+        "n": 2,
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "tn": 1,
+        "precision": 1.0,
+        "recall": 1.0
+      }
+    },
+    "en-el": {
+      "baseline": {
+        "n": 3,
+        "tp": 1,
+        "fp": 0,
+        "fn": 1,
+        "tn": 1,
+        "precision": 1.0,
+        "recall": 0.5
+      },
+      "semantic_union": {
+        "n": 3,
+        "tp": 2,
+        "fp": 1,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.6667,
+        "recall": 1.0
+      }
+    },
+    "tr-tr": {
+      "baseline": {
+        "n": 2,
+        "tp": 0,
+        "fp": 1,
+        "fn": 1,
+        "tn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "semantic_union": {
+        "n": 2,
+        "tp": 0,
+        "fp": 1,
+        "fn": 1,
+        "tn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      }
+    },
+    "en-en": {
+      "baseline": {
+        "n": 4,
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "tn": 3,
+        "precision": 1.0,
+        "recall": 1.0
+      },
+      "semantic_union": {
+        "n": 4,
+        "tp": 1,
+        "fp": 1,
+        "fn": 0,
+        "tn": 2,
+        "precision": 0.5,
+        "recall": 1.0
+      }
+    },
+    "el-el": {
+      "baseline": {
+        "n": 2,
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "tn": 1,
+        "precision": 1.0,
+        "recall": 1.0
+      },
+      "semantic_union": {
+        "n": 2,
+        "tp": 1,
+        "fp": 1,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.5,
+        "recall": 1.0
+      }
+    }
+  },
+  "cases": [
+    {
+      "id": "tr-en-alias",
+      "language_pair": "tr-en",
+      "expected": true,
+      "baseline": false,
+      "semantic_union": false,
+      "similarity": null,
+      "flags": [],
+      "reason": "Same shelter and request, translated location label"
+    },
+    {
+      "id": "tr-el-alias",
+      "language_pair": "tr-el",
+      "expected": true,
+      "baseline": false,
+      "semantic_union": true,
+      "similarity": 0.8441,
+      "flags": [
+        "location_unverified"
+      ],
+      "reason": "Same shelter and request, translated location label"
+    },
+    {
+      "id": "en-el-alias",
+      "language_pair": "en-el",
+      "expected": true,
+      "baseline": false,
+      "semantic_union": true,
+      "similarity": 0.9652,
+      "flags": [
+        "location_unverified"
+      ],
+      "reason": "Same school and food request"
+    },
+    {
+      "id": "tr-en-conflict",
+      "language_pair": "tr-en",
+      "expected": true,
+      "baseline": true,
+      "semantic_union": true,
+      "similarity": 0.7198,
+      "flags": [],
+      "reason": "Same request despite conflicting quantity; review required"
+    },
+    {
+      "id": "en-el-delivery",
+      "language_pair": "en-el",
+      "expected": true,
+      "baseline": true,
+      "semantic_union": true,
+      "similarity": 0.7226,
+      "flags": [],
+      "reason": "Delivery update for same water event, not permission to close"
+    },
+    {
+      "id": "tr-tr-paraphrase",
+      "language_pair": "tr-tr",
+      "expected": true,
+      "baseline": false,
+      "semantic_union": false,
+      "similarity": null,
+      "flags": [],
+      "reason": "Same centre and shelter request"
+    },
+    {
+      "id": "en-en-repost",
+      "language_pair": "en-en",
+      "expected": true,
+      "baseline": true,
+      "semantic_union": true,
+      "similarity": 1.0,
+      "flags": [
+        "possible_repost"
+      ],
+      "reason": "Exact repeat should be reviewed against original"
+    },
+    {
+      "id": "el-el-paraphrase",
+      "language_pair": "el-el",
+      "expected": true,
+      "baseline": true,
+      "semantic_union": true,
+      "similarity": 0.9133,
+      "flags": [],
+      "reason": "Same place and diaper request"
+    },
+    {
+      "id": "tr-en-food",
+      "language_pair": "tr-en",
+      "expected": true,
+      "baseline": false,
+      "semantic_union": true,
+      "similarity": 0.9143,
+      "flags": [
+        "location_unverified"
+      ],
+      "reason": "Same school food request with abbreviated label"
+    },
+    {
+      "id": "en-en-other-shelter",
+      "language_pair": "en-en",
+      "expected": false,
+      "baseline": false,
+      "semantic_union": true,
+      "similarity": 0.9179,
+      "flags": [
+        "location_unverified"
+      ],
+      "reason": "Distinct shelters; semantic similarity must not imply same event"
+    },
+    {
+      "id": "tr-en-other-city",
+      "language_pair": "tr-en",
+      "expected": false,
+      "baseline": false,
+      "semantic_union": false,
+      "similarity": null,
+      "flags": [],
+      "reason": "Different cities"
+    },
+    {
+      "id": "en-el-other-shelter",
+      "language_pair": "en-el",
+      "expected": false,
+      "baseline": false,
+      "semantic_union": true,
+      "similarity": 0.79,
+      "flags": [
+        "location_unverified"
+      ],
+      "reason": "Different shelters despite translated similar request"
+    },
+    {
+      "id": "tr-tr-distinct-groups",
+      "language_pair": "tr-tr",
+      "expected": false,
+      "baseline": true,
+      "semantic_union": true,
+      "similarity": 0.8578,
+      "flags": [],
+      "reason": "Separate households at same broad site; baseline ambiguity"
+    },
+    {
+      "id": "en-en-old-event",
+      "language_pair": "en-en",
+      "expected": false,
+      "baseline": false,
+      "semantic_union": false,
+      "similarity": null,
+      "flags": [],
+      "reason": "Beyond the configured 24-hour time window"
+    },
+    {
+      "id": "tr-el-category",
+      "language_pair": "tr-el",
+      "expected": false,
+      "baseline": false,
+      "semantic_union": false,
+      "similarity": null,
+      "flags": [],
+      "reason": "Different need category at same shelter"
+    },
+    {
+      "id": "en-en-general-advice",
+      "language_pair": "en-en",
+      "expected": false,
+      "baseline": false,
+      "semantic_union": false,
+      "similarity": null,
+      "flags": [],
+      "reason": "Advice is not a report of this need; input validation gap"
+    },
+    {
+      "id": "tr-en-hypothetical",
+      "language_pair": "tr-en",
+      "expected": false,
+      "baseline": true,
+      "semantic_union": true,
+      "similarity": 0.5683,
+      "flags": [],
+      "reason": "Hypothetical need incorrectly submitted as a report; not a factual update"
+    },
+    {
+      "id": "el-el-other-site",
+      "language_pair": "el-el",
+      "expected": false,
+      "baseline": false,
+      "semantic_union": true,
+      "similarity": 0.9585,
+      "flags": [
+        "location_unverified"
+      ],
+      "reason": "Distinct schools"
+    }
+  ]
+}

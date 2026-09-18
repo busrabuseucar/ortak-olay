@@ -22,6 +22,7 @@ const statuses = {
 };
 const languages = { tr: "Türkçe", en: "İngilizce", el: "Yunanca" };
 const flagLabels = {
+  location_unverified: "Konum adları farklı: aynı yer olduğunu doğrula",
   quantity_conflict: "Miktarlar çelişiyor",
   unit_mismatch_or_unknown: "Birimler farklı veya eksik",
   unknown_event_time: "Olay zamanı eksik",
@@ -257,7 +258,7 @@ async function selectRecord(id) {
         })),
       );
       if (view !== state.view) return;
-      renderReport(report, candidates);
+      renderReport(report, candidates, result.matching);
     }
   } catch (e) {
     if (view === state.view) {
@@ -269,10 +270,19 @@ async function selectRecord(id) {
     }
   }
 }
-function renderReport(r, candidates) {
+function matchingNote(matching) {
+  if (matching?.warning) return "Anlamsal model şu anda kullanılamıyor. Yalnızca aynı konum ve ihtiyaç türüne dayalı öneriler gösteriliyor.";
+  if (matching?.active === "semantic") return "Yerel çok dilli model ve konum/kategori kuralları kullanılıyor. Benzerlik puanı doğruluk olasılığı değildir. Model ilk 512 tokenı işler; konumu, zamanı ve ihtiyacın devam edip etmediğini kaynak metinden doğrula.";
+  return "Aynı konum ve ihtiyaç türüne dayalı kural önerileri. Anlamsal model etkin değil. Bağlamadan önce kaynakları karşılaştır.";
+}
+function candidateMethod(c) {
+  const names = {"baseline+semantic-v1": "Konum/kategori ve anlamsal benzerlik", "semantic-v1": "Anlamsal benzerlik", "structured-baseline-v1": "Konum/kategori kuralı"};
+  return `<p class="small">${esc(names[c.method] || c.method)}${c.similarity !== null && c.similarity !== undefined ? ` · Benzerlik: ${esc(c.similarity.toFixed(3))} · Kaynak: ${esc(c.semantic_evidence_report_id.slice(0, 8))}` : ""}</p>`;
+}
+function renderReport(r, candidates, matching) {
   const sameNeed = state.events.filter((e) => e.need === r.need);
   $("detail").innerHTML =
-    `<div class="detail-header"><div><span class="eyebrow">KAYNAK RAPOR</span><h2>${esc(r.location)} · ${esc(needs[r.need])}</h2><p class="small">${esc(languages[r.language])} · ${r.event_id ? "Bir ihtiyaç kaydına bağlı" : "Koordinatör kararı bekliyor"}</p></div><span class="badge">${esc(r.id.slice(0, 8))}</span></div><blockquote class="source" lang="${esc(r.language)}">${esc(r.text)}</blockquote>${metadata(r)}${r.event_id ? `<button class="secondary" data-event="${esc(r.event_id)}">Bağlı ihtiyaç kaydını aç</button><form id="split-form" class="decision-box"><h3>Yanlış bağlantıyı düzelt</h3><p class="small">Rapor ayrı, açık bir ihtiyaç kaydına taşınır. Önceki kararlar geçmişte kalır.</p><label for="split-reason">Ayırma gerekçesi</label><textarea id="split-reason" required minlength="3" maxlength="1000" rows="2"></textarea><div class="actions"><button class="secondary" type="submit">Raporu ayrı kayda taşı</button></div></form>` : `<h3 class="section-title">Benzer ihtiyaç kayıtları <span class="badge">${candidates.length}</span></h3><p class="small">Aynı konum ve ihtiyaç türüne sahip kayıtlar. Bağlamadan önce kaynakları karşılaştır.</p>${candidates.length ? candidates.map((c) => `<article class="candidate"><div class="record-top"><h3>${esc(c.event.location)} · ${esc(needs[c.event.need])}</h3>${badge(c.event.status)}</div><div class="flags">${c.flags.map((f) => `<span class="flag">${esc(flagLabels[f] || f)}</span>`).join("")}</div>${c.event.reports.map((source) => `<p class="evidence">${esc(languages[source.language])} · ${source.quantity === null ? "Miktar bilinmiyor" : `${esc(source.quantity)} ${esc(source.unit)}`} · ${esc(date(source.reported_at))}</p><blockquote class="source" lang="${esc(source.language)}">${esc(source.text)}</blockquote>`).join("")}<button class="secondary" type="button" data-candidate="${esc(c.event_id)}">Karar için bu kaydı seç</button></article>`).join("") : '<p class="small">Öneri bulunamadı. Ayrı bir ihtiyaç oluşturabilir veya konum adını doğrulayarak mevcut bir kayıt seçebilirsin.</p>'}<form id="decision-form" class="decision-box"><h3>Kararını kaydet</h3><label for="target-event">İşlem</label><select id="target-event"><option value="">Yeni, ayrı bir ihtiyaç oluştur</option>${sameNeed.map((e) => `<option value="${esc(e.id)}">Mevcut kayda bağla: ${esc(e.location)} · ${esc(statuses[e.status])} · ${esc(e.id.slice(0, 8))}</option>`).join("")}</select><label for="decision-reason">Karar gerekçesi</label><textarea id="decision-reason" required minlength="3" maxlength="1000" rows="2" placeholder="Hangi bilgiyi doğruladın?"></textarea><div class="actions"><button type="submit" class="primary">Kararı onayla ve kaydet</button></div><p class="small">Raporu bağlamak ihtiyaç durumunu otomatik değiştirmez.</p></form>`}`;
+    `<div class="detail-header"><div><span class="eyebrow">KAYNAK RAPOR</span><h2>${esc(r.location)} · ${esc(needs[r.need])}</h2><p class="small">${esc(languages[r.language])} · ${r.event_id ? "Bir ihtiyaç kaydına bağlı" : "Koordinatör kararı bekliyor"}</p></div><span class="badge">${esc(r.id.slice(0, 8))}</span></div><blockquote class="source" lang="${esc(r.language)}">${esc(r.text)}</blockquote>${metadata(r)}${r.event_id ? `<button class="secondary" data-event="${esc(r.event_id)}">Bağlı ihtiyaç kaydını aç</button><form id="split-form" class="decision-box"><h3>Yanlış bağlantıyı düzelt</h3><p class="small">Rapor ayrı, açık bir ihtiyaç kaydına taşınır. Önceki kararlar geçmişte kalır.</p><label for="split-reason">Ayırma gerekçesi</label><textarea id="split-reason" required minlength="3" maxlength="1000" rows="2"></textarea><div class="actions"><button class="secondary" type="submit">Raporu ayrı kayda taşı</button></div></form>` : `<h3 class="section-title">Benzer ihtiyaç kayıtları <span class="badge">${candidates.length}</span></h3><p class="small">${esc(matchingNote(matching))}</p>${candidates.length ? candidates.map((c) => `<article class="candidate"><div class="record-top"><h3>${esc(c.event.location)} · ${esc(needs[c.event.need])}</h3>${badge(c.event.status)}</div>${candidateMethod(c)}<div class="flags">${c.flags.map((f) => `<span class="flag">${esc(flagLabels[f] || f)}</span>`).join("")}</div>${c.event.reports.map((source) => `<p class="evidence">${esc(languages[source.language])} · ${source.quantity === null ? "Miktar bilinmiyor" : `${esc(source.quantity)} ${esc(source.unit)}`} · ${esc(date(source.reported_at))}</p><blockquote class="source" lang="${esc(source.language)}">${esc(source.text)}</blockquote>`).join("")}<button class="secondary" type="button" data-candidate="${esc(c.event_id)}">Karar için bu kaydı seç</button></article>`).join("") : '<p class="small">Öneri bulunamadı. Ayrı bir ihtiyaç oluşturabilir veya konum adını doğrulayarak mevcut bir kayıt seçebilirsin.</p>'}<form id="decision-form" class="decision-box"><h3>Kararını kaydet</h3><label for="target-event">İşlem</label><select id="target-event"><option value="">Yeni, ayrı bir ihtiyaç oluştur</option>${sameNeed.map((e) => `<option value="${esc(e.id)}">Mevcut kayda bağla: ${esc(e.location)} · ${esc(statuses[e.status])} · ${esc(e.id.slice(0, 8))}</option>`).join("")}</select><label for="decision-reason">Karar gerekçesi</label><textarea id="decision-reason" required minlength="3" maxlength="1000" rows="2" placeholder="Hangi bilgiyi doğruladın?"></textarea><div class="actions"><button type="submit" class="primary">Kararı onayla ve kaydet</button></div><p class="small">Raporu bağlamak ihtiyaç durumunu otomatik değiştirmez.</p></form>`}`;
 }
 function renderEvent(e) {
   $("detail").innerHTML =
