@@ -58,11 +58,11 @@ def test_coordinator_journey(server):
         expect(page.locator('#dashboard')).to_be_visible()
         expect(page.locator('#pending-count')).to_have_text('0')
 
-        def add(text, need='water', quantity='', unit='', language='tr'):
+        def add(text, need='water', quantity='', unit='', language='tr', location='Barınak A'):
             page.get_by_role('button', name='+ Yeni rapor').click()
             page.locator('#report-text').fill(text)
             page.locator('#report-source').fill('Synthetic browser exercise')
-            page.locator('#report-location').fill('Barınak A')
+            page.locator('#report-location').fill(location)
             page.locator('#report-language').select_option(language)
             page.locator('#report-need').select_option(need)
             page.locator('#report-quantity').fill(quantity)
@@ -157,6 +157,13 @@ def test_coordinator_journey(server):
         expect(page.locator('#form-error')).to_contain_text('Miktar ve birimi')
         expect(page.locator('#report-text')).to_have_value('Eksik birim örneği')
         page.get_by_role('button', name='Pencereyi kapat').click()
+        if os.getenv('ORTAK_MATCHER') == 'semantic':
+            add('Shelter B: 30 people need water.', language='en', location='Shelter B')
+            expect(page.locator('#detail')).to_contain_text('Konum kodu farklı olduğu için önerilmedi')
+            expect(page.locator('.candidate')).to_have_count(0)
+            # Human correction remains possible; this is a synthetic label-error decision.
+            decide('Tatbikat: kaynak konum etiketinin yanlış olduğu doğrulandı', water_id)
+            expect(page.locator('#detail .detail-header .badge')).to_have_text('Karşılandı')
         page.get_by_role('button', name='Oturumu kapat', exact=True).click()
         expect(page.locator('#dashboard')).not_to_be_visible()
         assert page.locator('#detail').inner_text() == ''

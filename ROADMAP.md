@@ -12,7 +12,7 @@ Acceptance: a reviewer completes the five-message scenario without invoking API 
 
 ## Milestone 2 — Local semantic retrieval implemented; independent evaluation pending
 
-Implemented: optional local multilingual embeddings, source-linked similarity scores, explicit fallback, and an 18-pair synthetic development comparison in `evaluation/`. The comparison finds more intended matches but also more false candidates; default matching remains the baseline.
+Implemented: optional local multilingual embeddings, source-linked similarity scores, explicit fallback, and an 18-pair synthetic development comparison in `evaluation/`. A subsequent narrow site-code guard removes three known false candidates without losing intended matches in that fixture. The guard was designed from those failures, so independent evaluation is still pending; default matching remains the baseline.
 
 Next: define a provider interface that returns extracted fields and exact source spans. Unknown facts must remain unknown. Improve location disambiguation and compare semantic retrieval with the retained structured baseline. Do not let model outputs call mutation endpoints or approve decisions.
 

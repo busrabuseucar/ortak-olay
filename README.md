@@ -83,9 +83,9 @@ The first launch downloads roughly 220 MB of public model weights from Hugging F
 
 The model is `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`, using FastEmbed 0.8.0, mean pooling, and a pinned quantized ONNX snapshot. This uses a pretrained model; it is not a new model trained by the team. See [evaluation/README.md](evaluation/README.md) for provenance and limitations.
 
-- Candidates are the union of the baseline and cosine similarity at least **0.78**. This threshold is a provisional development choice, not a calibrated probability.
+- Candidates start as the union of the baseline and cosine similarity at least **0.78**, then a narrow site-code conflict check removes contradictory labels from suggestions. This threshold is a provisional development choice, not a calibrated probability.
 - Need categories must match. Events with only known source times all more than 24 hours away are excluded. If any source time is unknown, the event remains eligible with a warning. All sources of an eligible event participate in scoring, so inspect the timestamp of the best-matching source too.
-- Different location labels are **not** resolved or geocoded; they generate a warning. Similarity alone cannot distinguish two shelters with nearly identical requests.
+- Different location labels are **not** resolved or geocoded. A conservative parser checks complete labels such as `Shelter A`, `Barınak B`, `Σχολείο Β`, or a bare code `A`. Conflicting letter/integer codes within the same site type (or with an unspecified type) are excluded from suggestions and shown separately with a reason. Compatible codes never prove identity. Unrecognized labels retain the existing location warning. Manual review and linking remain possible; previously approved aliases are not learned automatically.
 - The model sees at most the first **512 tokens**. Full original text remains visible. Negation, hypotheticals, delivery status and quantity conflicts require human inspection.
 - No model output can link reports, close needs or dispatch resources. Embeddings are held in a bounded memory cache only; original reports still persist in SQLite.
 - Every suggestion currently scans eligible events and their sources. There is no vector index or proven large-dataset performance yet.
@@ -96,7 +96,7 @@ Reproduce the real-model development check (does not touch the application datab
 python scripts/evaluate_matching.py
 ```
 
-On 18 synthetic, author-labelled pairs, the baseline retrieved 4 of 9 intended matches with 2 false candidates; semantic-plus-baseline retrieved 7 of 9 with 5 false candidates. This improves coverage in this small set while reducing precision. It is **not evidence of operational accuracy**. The feature remains opt-in. Full case-level results and per-language-pair counts are committed in `evaluation/results.json`.
+On the same 18 synthetic, author-labelled pairs, the baseline retrieves 4 of 9 intended matches with 2 false candidates. Semantic-plus-baseline without the location check retrieves 7 of 9 with 5 false candidates; with the check it retains those 7 matches and yields 2 false candidates. The location check was developed after inspecting these errors, so this is a regression measurement on known cases, not an independent evaluation. It is **not evidence of operational accuracy**. The feature remains opt-in. Full case-level results and per-language-pair counts are committed in `evaluation/results.json`.
 
 ## Tests
 

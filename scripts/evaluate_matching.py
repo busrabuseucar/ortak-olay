@@ -37,12 +37,14 @@ def main():
         event = dict(id='event', status='open', location=source['location'], need=source['need'])
         groups = [(event, [source])]
         baseline = suggest(query, groups)
+        unguarded = suggest(query, groups, encoder, location_guard=False)
         semantic = suggest(query, groups, encoder)
         if semantic['matching']['warning']:
             raise RuntimeError('Inference failed; refusing to save misleading semantic results')
         candidates = semantic['candidates']
         rows.append(dict(id=case['id'], language_pair=case['language_pair'], expected=case['expected'],
-                         baseline=bool(baseline['candidates']), semantic_union=bool(candidates),
+                         baseline=bool(baseline['candidates']), semantic_union_unguarded=bool(unguarded['candidates']), semantic_union=bool(candidates),
+                         excluded_locations=semantic['matching']['excluded_locations'],
                          similarity=candidates[0]['similarity'] if candidates else None,
                          flags=candidates[0]['flags'] if candidates else [], reason=case['reason']))
     by_language = defaultdict(list)
@@ -52,8 +54,8 @@ def main():
                   kind='synthetic-development-check-not-held-out', labels='author-defined; no independent or native-speaker review',
                   model=encoder.metadata, threshold=THRESHOLD,
                   dataset_sha256=hashlib.sha256(raw).hexdigest(),
-                  overall={f: metrics(rows, f) for f in ['baseline', 'semantic_union']},
-                  by_language_pair={k: {f: metrics(v, f) for f in ['baseline','semantic_union']} for k,v in by_language.items()},
+                  overall={f: metrics(rows, f) for f in ['baseline', 'semantic_union_unguarded', 'semantic_union']},
+                  by_language_pair={k: {f: metrics(v, f) for f in ['baseline','semantic_union_unguarded','semantic_union']} for k,v in by_language.items()},
                   cases=rows)
     Path(args.output).write_text(json.dumps(result, ensure_ascii=False, indent=2)+'\n')
     print(json.dumps(result['overall'], indent=2))

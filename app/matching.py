@@ -6,6 +6,7 @@ import logging
 import math
 import os
 from threading import Lock
+from app.locations import code_conflict
 
 MODEL = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
 MODEL_REPO = 'qdrant/paraphrase-multilingual-MiniLM-L12-v2-onnx-Q'
@@ -77,7 +78,7 @@ def flags_for(report, event, linked):
     return flags
 
 
-def suggest(report, groups, encoder=None, threshold=THRESHOLD):
+def suggest(report, groups, encoder=None, threshold=THRESHOLD, location_guard=True):
     """Return union of baseline candidates and semantic candidates; never mutate data."""
     groups = [(e, rs) for e, rs in groups if eligible(report, e, rs)]
     requested = 'semantic' if encoder is not None else 'baseline'
@@ -95,12 +96,18 @@ def suggest(report, groups, encoder=None, threshold=THRESHOLD):
             logger.warning('Semantic inference unavailable; returning labelled baseline results')
             warning = 'semantic_unavailable'
     candidates = []
+    excluded = []
     for event, linked in groups:
         same_location = event['location'].casefold() == report['location'].casefold()
         best = max(linked, key=lambda r: scores.get(r['id'], -2))
         score = scores.get(best['id'])
         semantic_match = score is not None and score >= threshold
         if not same_location and not semantic_match:
+            continue
+        # Do not let semantic similarity override explicit different site codes.
+        # Linked aliases remain evidence of human decisions, not automatic overrides.
+        if location_guard and not same_location and code_conflict(report['location'], event['location']):
+            excluded.append({'event_id': event['id'], 'location': event['location'], 'reason': 'site_code_conflict'})
             continue
         flags = flags_for(report, event, linked)
         if not same_location:
@@ -123,5 +130,6 @@ def suggest(report, groups, encoder=None, threshold=THRESHOLD):
         'report_id': report['id'], 'candidates': candidates, 'automatic_linking': False,
         'matching': {'requested': requested, 'active': 'baseline' if warning or encoder is None else 'semantic',
                      'warning': warning, 'threshold': threshold if encoder is not None else None,
+                     'location_guard': 'site-code-v1' if location_guard else None, 'excluded_locations': excluded,
                      'score_is_probability': False, 'model': getattr(encoder, 'metadata', None)},
     }

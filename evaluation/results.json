@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-09-18T17:51:35.522980+00:00",
+  "created_at": "2026-09-18T17:58:01.478972+00:00",
   "kind": "synthetic-development-check-not-held-out",
   "labels": "author-defined; no independent or native-speaker review",
   "model": {
@@ -26,13 +26,22 @@
       "precision": 0.6667,
       "recall": 0.4444
     },
-    "semantic_union": {
+    "semantic_union_unguarded": {
       "n": 18,
       "tp": 7,
       "fp": 5,
       "fn": 2,
       "tn": 4,
       "precision": 0.5833,
+      "recall": 0.7778
+    },
+    "semantic_union": {
+      "n": 18,
+      "tp": 7,
+      "fp": 2,
+      "fn": 2,
+      "tn": 7,
+      "precision": 0.7778,
       "recall": 0.7778
     }
   },
@@ -46,6 +55,15 @@
         "tn": 1,
         "precision": 0.5,
         "recall": 0.3333
+      },
+      "semantic_union_unguarded": {
+        "n": 5,
+        "tp": 2,
+        "fp": 1,
+        "fn": 1,
+        "tn": 1,
+        "precision": 0.6667,
+        "recall": 0.6667
       },
       "semantic_union": {
         "n": 5,
@@ -67,6 +85,15 @@
         "precision": null,
         "recall": 0.0
       },
+      "semantic_union_unguarded": {
+        "n": 2,
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "tn": 1,
+        "precision": 1.0,
+        "recall": 1.0
+      },
       "semantic_union": {
         "n": 2,
         "tp": 1,
@@ -87,7 +114,7 @@
         "precision": 1.0,
         "recall": 0.5
       },
-      "semantic_union": {
+      "semantic_union_unguarded": {
         "n": 3,
         "tp": 2,
         "fp": 1,
@@ -95,10 +122,28 @@
         "tn": 0,
         "precision": 0.6667,
         "recall": 1.0
+      },
+      "semantic_union": {
+        "n": 3,
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "tn": 1,
+        "precision": 1.0,
+        "recall": 1.0
       }
     },
     "tr-tr": {
       "baseline": {
+        "n": 2,
+        "tp": 0,
+        "fp": 1,
+        "fn": 1,
+        "tn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "semantic_union_unguarded": {
         "n": 2,
         "tp": 0,
         "fp": 1,
@@ -127,13 +172,22 @@
         "precision": 1.0,
         "recall": 1.0
       },
-      "semantic_union": {
+      "semantic_union_unguarded": {
         "n": 4,
         "tp": 1,
         "fp": 1,
         "fn": 0,
         "tn": 2,
         "precision": 0.5,
+        "recall": 1.0
+      },
+      "semantic_union": {
+        "n": 4,
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "tn": 3,
+        "precision": 1.0,
         "recall": 1.0
       }
     },
@@ -147,13 +201,22 @@
         "precision": 1.0,
         "recall": 1.0
       },
-      "semantic_union": {
+      "semantic_union_unguarded": {
         "n": 2,
         "tp": 1,
         "fp": 1,
         "fn": 0,
         "tn": 0,
         "precision": 0.5,
+        "recall": 1.0
+      },
+      "semantic_union": {
+        "n": 2,
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "tn": 1,
+        "precision": 1.0,
         "recall": 1.0
       }
     }
@@ -164,7 +227,9 @@
       "language_pair": "tr-en",
       "expected": true,
       "baseline": false,
+      "semantic_union_unguarded": false,
       "semantic_union": false,
+      "excluded_locations": [],
       "similarity": null,
       "flags": [],
       "reason": "Same shelter and request, translated location label"
@@ -174,7 +239,9 @@
       "language_pair": "tr-el",
       "expected": true,
       "baseline": false,
+      "semantic_union_unguarded": true,
       "semantic_union": true,
+      "excluded_locations": [],
       "similarity": 0.8441,
       "flags": [
         "location_unverified"
@@ -186,7 +253,9 @@
       "language_pair": "en-el",
       "expected": true,
       "baseline": false,
+      "semantic_union_unguarded": true,
       "semantic_union": true,
+      "excluded_locations": [],
       "similarity": 0.9652,
       "flags": [
         "location_unverified"
@@ -198,7 +267,9 @@
       "language_pair": "tr-en",
       "expected": true,
       "baseline": true,
+      "semantic_union_unguarded": true,
       "semantic_union": true,
+      "excluded_locations": [],
       "similarity": 0.7198,
       "flags": [],
       "reason": "Same request despite conflicting quantity; review required"
@@ -208,7 +279,9 @@
       "language_pair": "en-el",
       "expected": true,
       "baseline": true,
+      "semantic_union_unguarded": true,
       "semantic_union": true,
+      "excluded_locations": [],
       "similarity": 0.7226,
       "flags": [],
       "reason": "Delivery update for same water event, not permission to close"
@@ -218,7 +291,9 @@
       "language_pair": "tr-tr",
       "expected": true,
       "baseline": false,
+      "semantic_union_unguarded": false,
       "semantic_union": false,
+      "excluded_locations": [],
       "similarity": null,
       "flags": [],
       "reason": "Same centre and shelter request"
@@ -228,7 +303,9 @@
       "language_pair": "en-en",
       "expected": true,
       "baseline": true,
+      "semantic_union_unguarded": true,
       "semantic_union": true,
+      "excluded_locations": [],
       "similarity": 1.0,
       "flags": [
         "possible_repost"
@@ -240,7 +317,9 @@
       "language_pair": "el-el",
       "expected": true,
       "baseline": true,
+      "semantic_union_unguarded": true,
       "semantic_union": true,
+      "excluded_locations": [],
       "similarity": 0.9133,
       "flags": [],
       "reason": "Same place and diaper request"
@@ -250,7 +329,9 @@
       "language_pair": "tr-en",
       "expected": true,
       "baseline": false,
+      "semantic_union_unguarded": true,
       "semantic_union": true,
+      "excluded_locations": [],
       "similarity": 0.9143,
       "flags": [
         "location_unverified"
@@ -262,11 +343,17 @@
       "language_pair": "en-en",
       "expected": false,
       "baseline": false,
-      "semantic_union": true,
-      "similarity": 0.9179,
-      "flags": [
-        "location_unverified"
+      "semantic_union_unguarded": true,
+      "semantic_union": false,
+      "excluded_locations": [
+        {
+          "event_id": "event",
+          "location": "A",
+          "reason": "site_code_conflict"
+        }
       ],
+      "similarity": null,
+      "flags": [],
       "reason": "Distinct shelters; semantic similarity must not imply same event"
     },
     {
@@ -274,7 +361,9 @@
       "language_pair": "tr-en",
       "expected": false,
       "baseline": false,
+      "semantic_union_unguarded": false,
       "semantic_union": false,
+      "excluded_locations": [],
       "similarity": null,
       "flags": [],
       "reason": "Different cities"
@@ -284,11 +373,17 @@
       "language_pair": "en-el",
       "expected": false,
       "baseline": false,
-      "semantic_union": true,
-      "similarity": 0.79,
-      "flags": [
-        "location_unverified"
+      "semantic_union_unguarded": true,
+      "semantic_union": false,
+      "excluded_locations": [
+        {
+          "event_id": "event",
+          "location": "A",
+          "reason": "site_code_conflict"
+        }
       ],
+      "similarity": null,
+      "flags": [],
       "reason": "Different shelters despite translated similar request"
     },
     {
@@ -296,7 +391,9 @@
       "language_pair": "tr-tr",
       "expected": false,
       "baseline": true,
+      "semantic_union_unguarded": true,
       "semantic_union": true,
+      "excluded_locations": [],
       "similarity": 0.8578,
       "flags": [],
       "reason": "Separate households at same broad site; baseline ambiguity"
@@ -306,7 +403,9 @@
       "language_pair": "en-en",
       "expected": false,
       "baseline": false,
+      "semantic_union_unguarded": false,
       "semantic_union": false,
+      "excluded_locations": [],
       "similarity": null,
       "flags": [],
       "reason": "Beyond the configured 24-hour time window"
@@ -316,7 +415,9 @@
       "language_pair": "tr-el",
       "expected": false,
       "baseline": false,
+      "semantic_union_unguarded": false,
       "semantic_union": false,
+      "excluded_locations": [],
       "similarity": null,
       "flags": [],
       "reason": "Different need category at same shelter"
@@ -326,7 +427,9 @@
       "language_pair": "en-en",
       "expected": false,
       "baseline": false,
+      "semantic_union_unguarded": false,
       "semantic_union": false,
+      "excluded_locations": [],
       "similarity": null,
       "flags": [],
       "reason": "Advice is not a report of this need; input validation gap"
@@ -336,7 +439,9 @@
       "language_pair": "tr-en",
       "expected": false,
       "baseline": true,
+      "semantic_union_unguarded": true,
       "semantic_union": true,
+      "excluded_locations": [],
       "similarity": 0.5683,
       "flags": [],
       "reason": "Hypothetical need incorrectly submitted as a report; not a factual update"
@@ -346,11 +451,17 @@
       "language_pair": "el-el",
       "expected": false,
       "baseline": false,
-      "semantic_union": true,
-      "similarity": 0.9585,
-      "flags": [
-        "location_unverified"
+      "semantic_union_unguarded": true,
+      "semantic_union": false,
+      "excluded_locations": [
+        {
+          "event_id": "event",
+          "location": "Σχολείο Α",
+          "reason": "site_code_conflict"
+        }
       ],
+      "similarity": null,
+      "flags": [],
       "reason": "Distinct schools"
     }
   ]
