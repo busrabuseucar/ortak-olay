@@ -139,3 +139,18 @@ def test_persistence(tmp_path):
 def test_missing_credentials_fail_closed(tmp_path):
     with pytest.raises(RuntimeError):
         create_app(str(tmp_path / "none.db"), {})
+
+
+def test_dashboard_assets_and_data_access(client):
+    client.headers.pop('Authorization')
+    response = client.get('/')
+    assert response.status_code == 200
+    assert 'Koordinasyon masası' in response.text
+    assert 'frame-ancestors' in response.headers['content-security-policy']
+    assert response.headers['cache-control'] == 'no-store'
+    for path, content_type in [('/static/app.js', 'javascript'), ('/static/style.css', 'text/css'), ('/static/favicon.svg', 'image/svg+xml')]:
+        response = client.get(path)
+        assert response.status_code == 200
+        assert content_type in response.headers['content-type']
+        assert TOKEN not in response.text
+    assert client.get('/reports').status_code == 401

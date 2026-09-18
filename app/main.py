@@ -11,6 +11,8 @@ from uuid import uuid4
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 
@@ -120,13 +122,31 @@ def create_app(db_path=None, reviewers=None):
         raise HTTPException(401, "Valid reviewer token required", headers={"WWW-Authenticate": "Bearer"})
 
     api = FastAPI(
-        title="Ortak Olay", version="0.1.0",
+        title="Ortak Olay", version="0.2.0",
         description="Synthetic-exercise prototype. Structured reports, baseline suggestions and human decisions. No trained AI model or operational validation.",
     )
 
+    static = Path(__file__).resolve().parent / "static"
+    api.mount("/static", StaticFiles(directory=static), name="static")
+
+    @api.get("/", include_in_schema=False)
+    def dashboard():
+        return FileResponse(static / "index.html", headers={"Cache-Control": "no-store"})
+
+    @api.middleware("http")
+    async def browser_headers(request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "same-origin"
+        if request.url.path not in ("/docs", "/redoc", "/docs/oauth2-redirect"):
+            response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        if not request.url.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "no-store"
+        return response
+
     @api.get("/health")
     def health():
-        return {"status": "ok", "version": "0.1.0", "stage": "local-prototype"}
+        return {"status": "ok", "version": "0.2.0", "stage": "local-prototype"}
 
     @api.post("/reports", status_code=201)
     def add_report(item: Report, actor=Depends(reviewer)):

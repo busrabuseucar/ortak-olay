@@ -2,7 +2,7 @@
 
 Human-reviewed disaster needs tracking across Turkish, Greek and English reports.
 
-**Status: v0.1 backend prototype for synthetic exercises.** This repository implements the review workflow behind the Greece–Türkiye Hackathon proposal. It is not a deployed emergency service. The matching component is an explicit structured baseline, not a trained AI model. Free-text multilingual extraction and a coordinator dashboard are future milestones.
+**Status: v0.2 coordinator prototype for synthetic exercises.** This repository implements the review workflow behind the Greece–Türkiye Hackathon proposal. It is not a deployed emergency service. The matching component is an explicit structured baseline, not a trained AI model. A Turkish coordinator dashboard is included. Free-text multilingual extraction remains a future milestone.
 
 ## What works
 
@@ -12,6 +12,7 @@ Human-reviewed disaster needs tracking across Turkish, Greek and English reports
 - Require an authenticated reviewer to create an event, link a report, split a mistaken grouping or change a need's status.
 - Keep water, diapers and other categories separate. Linking a delivery report does not itself close a need.
 - Record reviewer identity, reason, evidence and status history. Reject stale status updates using version checks.
+- Use the responsive coordinator interface at `/` to add reports, compare sources, approve links, split mistakes and update status with evidence.
 - Explore the API through `/docs` and run a repeatable synthetic walkthrough.
 
 ## Quick start
@@ -41,7 +42,7 @@ python -m pip install -r requirements.txt
 python scripts/run_local.py
 ```
 
-The local launcher generates a temporary reviewer token and prints it in your terminal. Open **http://127.0.0.1:8000/docs**, press **Authorize**, and paste that token. It changes on restart. The SQLite data persists in `data/ortak.db`. The launcher binds only to loopback and does not publish the service online.
+The local launcher generates a temporary reviewer token and prints it in your terminal. Open **http://127.0.0.1:8000**, paste that token in the login screen, and select **Oturumu aç**. The token is held in memory only; refreshing the page requires login again. For API exploration, use `/docs` and **Authorize**. It changes on restart. The SQLite data persists in `data/ortak.db`. The launcher binds only to loopback and does not publish the service online.
 
 To run the synthetic walkthrough, keep the server running and open a second terminal in this directory. Activate the same virtual environment. Use the token printed by the launcher:
 
@@ -77,6 +78,16 @@ python -m pytest -q
 
 The suite covers the application scenario, access control, status conflicts, evidence constraints, split history, category separation, time windows, validation, Greek text preservation and persistence. Passing these functional tests does not measure matching precision, clinical outcomes or disaster-response impact.
 
+The optional browser regression starts an isolated local server and temporary database. It exercises login, report creation, conflicts, linking, delivery status, splitting, stale decisions, safe text rendering, mobile layout, validation and logout through the interface:
+
+```sh
+python -m pip install -r requirements-browser.txt
+python -m playwright install chromium
+python -m pytest -q browser_tests
+```
+
+Both suites run in GitHub Actions. The browser dependency is used only for testing; it is not required to run the application.
+
 ## API
 
 | Method | Path | Purpose |
@@ -104,7 +115,7 @@ All data endpoints require a bearer token. `/health` and API schema documentatio
 
 ## Next milestones
 
-See [ROADMAP.md](ROADMAP.md). The next product milestone is the three-view coordinator interface: incoming reports, event details and review decisions. Then add source-linked extraction and multilingual semantic matching, compare them against this baseline, and validate the workflow with a coordinator.
+See [ROADMAP.md](ROADMAP.md). The coordinator interface now connects incoming reports, event details and review decisions. Next, add source-linked extraction and multilingual semantic matching, compare them against this baseline, and validate the workflow with a coordinator.
 
 ## Team
 

@@ -13,7 +13,8 @@ import uvicorn
 
 token = secrets.token_urlsafe(32)
 os.environ["ORTAK_REVIEWERS"] = json.dumps({token: "local-reviewer"})
+print("Koordinatör arayüzü: http://127.0.0.1:8000", flush=True)
 print("API: http://127.0.0.1:8000/docs", flush=True)
-print("Local reviewer token (paste into Authorize):", token, flush=True)
+print("Koordinatör anahtarı (giriş ekranına yapıştır):", token, flush=True)
 print("Synthetic exercises only. Press Ctrl+C to stop.", flush=True)
 uvicorn.run("app.main:create_app", factory=True, host="127.0.0.1", port=8000)

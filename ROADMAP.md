@@ -2,11 +2,11 @@
 
 ## Completed foundation
 
-Structured report API, SQLite persistence, human decisions, per-need status, evidence links, audit history, rule-based matching baseline and a synthetic scenario test suite. The API explorer is for developers; it is not the proposed coordinator dashboard.
+Structured report API, SQLite persistence, human decisions, per-need status, evidence links, audit history, rule-based matching baseline and a synthetic scenario test suite. A responsive Turkish coordinator dashboard now serves from `/` and connects to the authenticated API.
 
-## Milestone 1 — Usable coordinator workflow
+## Milestone 1 — Coordinator interface implemented, user validation pending
 
-Build incoming-report, event-detail and review-decision views. Show original language and source text beside any future extraction. Surface quantity disagreements, unknown timestamps and status evidence. Preserve decisions across restarts. Test keyboard operation, errors, stale version conflicts, linking and splitting with a complete exercise.
+Incoming-report, event-detail and review-decision views are implemented. Show original language and source text beside any future extraction. Surface quantity disagreements, unknown timestamps and status evidence. Preserve decisions across restarts. Test keyboard operation, errors, stale version conflicts, linking and splitting with a complete exercise.
 
 Acceptance: a reviewer completes the five-message scenario without invoking API endpoints manually. Record completion time and corrections without inventing performance improvements.
 

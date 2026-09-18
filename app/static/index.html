@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ortak Olay · Koordinatör çalışma alanı</title>
+    <meta
+      name="description"
+      content="Afet ihtiyaç raporlarını incele, kaynakları karşılaştır ve kararlarını kaydet."
+    />
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/static/style.css" />
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#workspace">Çalışma alanına geç</a>
+    <header class="topbar">
+      <a class="brand" href="/"
+        >Ortak<span>Olay</span
+        ><span class="brand-mark" aria-hidden="true">↗</span></a
+      ><span class="environment">Tatbikat prototipi</span
+      ><button id="logout" class="quiet" hidden>Oturumu kapat</button>
+    </header>
+    <div
+      id="notice"
+      role="status"
+      aria-live="polite"
+      tabindex="-1"
+      hidden
+    ></div>
+    <main id="workspace">
+      <section id="login-view" class="login-layout">
+        <div class="intro">
+          <p class="eyebrow">KOORDİNATÖR ÇALIŞMA ALANI</p>
+          <h1>Her ihtiyacın<br />bir kaydı olsun.</h1>
+          <p>
+            Gelen raporları karşılaştır. Aynı ihtiyaca ait kaynakları birleştir.
+            Neyin karşılandığını kanıtıyla takip et.
+          </p>
+          <div class="intro-bottom">
+            <span>01 / İncele</span><span>02 / Karar ver</span
+            ><span>03 / Takip et</span>
+          </div>
+        </div>
+        <form id="login-form" class="login-card">
+          <span class="tag">YETKİLİ ERİŞİM</span>
+          <h2>Çalışma alanını aç</h2>
+          <p>
+            Uygulamayı başlattığında terminalde gösterilen koordinatör
+            anahtarını gir.
+          </p>
+          <label for="token">Erişim anahtarı</label
+          ><input
+            id="token"
+            type="password"
+            autocomplete="off"
+            required
+            placeholder="Anahtarını buraya yapıştır"
+          /><button type="submit" class="primary">
+            Oturumu aç <span aria-hidden="true">→</span>
+          </button>
+          <p class="small">
+            Anahtar tarayıcıya kaydedilmez. Sayfayı yenilersen yeniden giriş
+            yapman gerekir.
+          </p>
+        </form>
+      </section>
+      <section id="dashboard" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">RAPOR VE İHTİYAÇ TAKİBİ</p>
+            <h1>Koordinasyon masası</h1>
+          </div>
+          <div class="toolbar">
+            <button id="refresh" class="secondary">Yenile</button
+            ><button id="add-report" class="primary">+ Yeni rapor</button>
+          </div>
+        </div>
+        <div class="metrics" aria-label="Güncel kayıt sayıları">
+          <div>
+            <span>İnceleme bekleyen</span><strong id="pending-count">0</strong>
+          </div>
+          <div>
+            <span>Aktif ihtiyaç</span><strong id="active-count">0</strong>
+          </div>
+          <div>
+            <span>Karşılanan ihtiyaç</span><strong id="closed-count">0</strong>
+          </div>
+        </div>
+        <div class="desk">
+          <aside class="inbox">
+            <div class="tabs" aria-label="Kayıt türü">
+              <button id="reports-tab" aria-pressed="true">
+                Gelen raporlar</button
+              ><button id="events-tab" aria-pressed="false">
+                İhtiyaç kayıtları
+              </button>
+            </div>
+            <div class="filters">
+              <label for="search">Konum veya metin ara</label
+              ><input
+                id="search"
+                type="search"
+                placeholder="Örn. Barınak A"
+              /><label for="filter">Göster</label
+              ><select id="filter">
+                <option value="pending">İnceleme bekleyen</option>
+                <option value="all">Tüm raporlar</option>
+              </select>
+            </div>
+            <div
+              id="record-list"
+              class="record-list"
+              aria-label="Kayıtlar"
+            ></div>
+          </aside>
+          <section
+            id="detail"
+            class="detail"
+            aria-label="Kayıt ayrıntıları"
+            aria-live="polite"
+          ></section>
+        </div>
+        <footer>
+          Kararlar koordinatör onayıyla kaydedilir. Eşleştirme önerileri konum
+          ve ihtiyaç kategorisine dayanır.
+        </footer>
+      </section>
+    </main>
+    <dialog id="report-dialog">
+      <form id="report-form">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">GELEN RAPOR</p>
+            <h2>Yeni rapor ekle</h2>
+          </div>
+          <button
+            type="button"
+            id="close-dialog"
+            class="quiet"
+            aria-label="Pencereyi kapat"
+          >
+            ✕
+          </button>
+        </div>
+        <p class="small">
+          Her rapor tek bir ihtiyaç türünü temsil eder. Bir mesajda birden fazla
+          ihtiyaç varsa ayrı raporlar ekle.
+        </p>
+        <label for="report-text">Kaynak mesaj</label
+        ><textarea
+          id="report-text"
+          name="text"
+          rows="3"
+          required
+          maxlength="5000"
+          placeholder="Mesajı değiştirmeden buraya yaz"
+        ></textarea>
+        <div class="form-grid">
+          <div>
+            <label for="report-language">Mesaj dili</label
+            ><select id="report-language" name="language">
+              <option value="tr">Türkçe</option>
+              <option value="en">İngilizce</option>
+              <option value="el">Yunanca</option>
+            </select>
+          </div>
+          <div>
+            <label for="report-source">Kaynak</label
+            ><input
+              id="report-source"
+              name="source"
+              required
+              maxlength="200"
+              placeholder="Örn. Tatbikat saha ekibi"
+            />
+          </div>
+          <div>
+            <label for="report-location">Konum</label
+            ><input
+              id="report-location"
+              name="location"
+              required
+              maxlength="200"
+              placeholder="Örn. Barınak A"
+            />
+          </div>
+          <div>
+            <label for="report-need">İhtiyaç türü</label
+            ><select id="report-need" name="need">
+              <option value="water">Su</option>
+              <option value="food">Gıda</option>
+              <option value="shelter">Barınma</option>
+              <option value="diapers">Bebek bezi</option>
+              <option value="other">Diğer</option>
+            </select>
+          </div>
+          <div>
+            <label for="report-quantity"
+              >Miktar <span>(isteğe bağlı)</span></label
+            ><input
+              id="report-quantity"
+              name="quantity"
+              type="number"
+              min="0"
+              max="1000000"
+              step="1"
+            />
+          </div>
+          <div>
+            <label for="report-unit"
+              >Birim <span>(miktarla birlikte)</span></label
+            ><input
+              id="report-unit"
+              name="unit"
+              maxlength="50"
+              placeholder="kişi, litre, paket…"
+            />
+          </div>
+        </div>
+        <label for="report-time"
+          >Olay zamanı <span>(biliniyorsa, yerel saat)</span></label
+        ><input id="report-time" name="reported_at" type="datetime-local" />
+        <p id="form-error" class="error-text" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button type="submit" class="primary">Raporu kaydet</button>
+        </div>
+      </form>
+    </dialog>
+  </body>
+</html>
