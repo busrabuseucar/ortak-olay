@@ -144,7 +144,7 @@
         </div>
         <p class="small">
           Her rapor tek bir ihtiyaç türünü temsil eder. Bir mesajda birden fazla
-          ihtiyaç varsa ayrı raporlar ekle.
+          ihtiyaç varsa ayrı raporlar ekle. Grup kodu ve mesaj türü senin değerlendirmen; metinden otomatik çıkarılmaz. Bilmediğin grup kodunu boş bırak.
         </p>
         <label for="report-text">Kaynak mesaj</label
         ><textarea
@@ -192,6 +192,20 @@
               <option value="shelter">Barınma</option>
               <option value="diapers">Bebek bezi</option>
               <option value="other">Diğer</option>
+            </select>
+          </div>
+          <div>
+            <label for="report-group">Grup / çadır kodu (biliniyorsa)</label>
+            <input id="report-group" name="group_ref" maxlength="100" placeholder="Örn. tent-12; aynı grup için aynı kod" />
+          </div>
+          <div>
+            <label for="report-statement">Mesajın türü</label>
+            <select id="report-statement" name="statement_type">
+              <option value="unknown">Belirsiz / henüz değerlendirilmedi</option>
+              <option value="need">İhtiyaç bildirimi</option>
+              <option value="update">Güncelleme / teslimat bildirimi</option>
+              <option value="hypothetical">Varsayımsal durum</option>
+              <option value="general_info">Genel bilgi / tavsiye</option>
             </select>
           </div>
           <div>

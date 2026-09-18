@@ -7,6 +7,7 @@ import math
 import os
 from threading import Lock
 from app.locations import code_conflict
+from app.report_scope import NON_FACTUAL, group_conflict, known_group_refs, report_warnings
 
 MODEL = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
 MODEL_REPO = 'qdrant/paraphrase-multilingual-MiniLM-L12-v2-onnx-Q'
@@ -80,6 +81,8 @@ def flags_for(report, event, linked):
 
 def suggest(report, groups, encoder=None, threshold=THRESHOLD, location_guard=True):
     """Return union of baseline candidates and semantic candidates; never mutate data."""
+    blocked = report.get('statement_type') in NON_FACTUAL
+    groups = [] if blocked else [(e, [r for r in rs if r.get('statement_type') not in NON_FACTUAL]) for e, rs in groups]
     groups = [(e, rs) for e, rs in groups if eligible(report, e, rs)]
     requested = 'semantic' if encoder is not None else 'baseline'
     warning = None
@@ -97,6 +100,7 @@ def suggest(report, groups, encoder=None, threshold=THRESHOLD, location_guard=Tr
             warning = 'semantic_unavailable'
     candidates = []
     excluded = []
+    excluded_groups = []
     for event, linked in groups:
         same_location = event['location'].casefold() == report['location'].casefold()
         best = max(linked, key=lambda r: scores.get(r['id'], -2))
@@ -104,12 +108,19 @@ def suggest(report, groups, encoder=None, threshold=THRESHOLD, location_guard=Tr
         semantic_match = score is not None and score >= threshold
         if not same_location and not semantic_match:
             continue
+        if group_conflict(report, event, linked):
+            excluded_groups.append({'event_id': event['id'], 'group_ref': ', '.join(known_group_refs(event, linked)), 'reason': 'group_ref_conflict'})
+            continue
         # Do not let semantic similarity override explicit different site codes.
         # Linked aliases remain evidence of human decisions, not automatic overrides.
         if location_guard and not same_location and code_conflict(report['location'], event['location']):
             excluded.append({'event_id': event['id'], 'location': event['location'], 'reason': 'site_code_conflict'})
             continue
         flags = flags_for(report, event, linked)
+        if not report.get('group_ref') or not event.get('group_ref'):
+            flags.append('group_unknown')
+        if report.get('statement_type', 'unknown') == 'unknown' or any(r.get('statement_type', 'unknown') == 'unknown' for r in linked):
+            flags.append('statement_type_unknown')
         if not same_location:
             flags.append('location_unverified')
         reasons = ['same_need_category']
@@ -130,6 +141,7 @@ def suggest(report, groups, encoder=None, threshold=THRESHOLD, location_guard=Tr
         'report_id': report['id'], 'candidates': candidates, 'automatic_linking': False,
         'matching': {'requested': requested, 'active': 'baseline' if warning or encoder is None else 'semantic',
                      'warning': warning, 'threshold': threshold if encoder is not None else None,
-                     'location_guard': 'site-code-v1' if location_guard else None, 'excluded_locations': excluded,
+                     'blocked_reason': 'non_factual_report' if blocked else None, 'report_warnings': report_warnings(report),
+                     'excluded_groups': excluded_groups, 'location_guard': 'site-code-v1' if location_guard else None, 'excluded_locations': excluded,
                      'score_is_probability': False, 'model': getattr(encoder, 'metadata', None)},
     }

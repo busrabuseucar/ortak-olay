@@ -2,7 +2,7 @@
 
 ## Completed foundation
 
-Structured report API, SQLite persistence, human decisions, per-need status, evidence links, audit history, rule-based matching baseline and a synthetic scenario test suite. A responsive Turkish coordinator dashboard now serves from `/` and connects to the authenticated API.
+Structured report API, SQLite persistence, human decisions, per-need status, evidence links, audit history, rule-based matching baseline and a synthetic scenario test suite. A responsive Turkish coordinator dashboard now serves from `/` and connects to the authenticated API. Reviewer-entered group/type annotations, audited pre-link corrections and additive legacy migration are implemented. Explicit non-factual types cannot become needs, and conflicting known groups cannot be linked. Unknown annotations remain uncertain.
 
 ## Milestone 1 — Coordinator interface implemented, user validation pending
 
@@ -14,7 +14,7 @@ Acceptance: a reviewer completes the five-message scenario without invoking API 
 
 Implemented: optional local multilingual embeddings, source-linked similarity scores, explicit fallback, and an 18-pair synthetic development comparison in `evaluation/`. A subsequent narrow site-code guard removes three known false candidates without losing intended matches in that fixture. The guard was designed from those failures, so independent evaluation is still pending; default matching remains the baseline.
 
-Next: define a provider interface that returns extracted fields and exact source spans. Unknown facts must remain unknown. Improve location disambiguation and compare semantic retrieval with the retained structured baseline. Do not let model outputs call mutation endpoints or approve decisions.
+Next: validate the added annotation burden and correction workflow with a coordinator; support correction of linked scope before considering a pilot. Then define a provider interface that returns extracted fields and exact source spans. Unknown facts must remain unknown. Improve location disambiguation and compare semantic retrieval with the retained structured baseline. Do not let model outputs call mutation endpoints or approve decisions.
 
 Build independently labelled TR/EL/EN exercise cases, reviewed by appropriate speakers. Partition by scenario family before tuning so reposts and translations do not leak across partitions. Include distinct shelters with similar names, different units, conflicting quantities, old reposts, negation and partial fulfilment. Report sample counts, precision, recall and false merges by language and scenario. Do not treat a small synthetic evaluation as real-world validation.
 

@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-09-18T17:58:01.478972+00:00",
+  "created_at": "2026-09-18T18:08:54.238279+00:00",
   "kind": "synthetic-development-check-not-held-out",
   "labels": "author-defined; no independent or native-speaker review",
   "model": {
@@ -244,6 +244,8 @@
       "excluded_locations": [],
       "similarity": 0.8441,
       "flags": [
+        "group_unknown",
+        "statement_type_unknown",
         "location_unverified"
       ],
       "reason": "Same shelter and request, translated location label"
@@ -258,6 +260,8 @@
       "excluded_locations": [],
       "similarity": 0.9652,
       "flags": [
+        "group_unknown",
+        "statement_type_unknown",
         "location_unverified"
       ],
       "reason": "Same school and food request"
@@ -271,7 +275,10 @@
       "semantic_union": true,
       "excluded_locations": [],
       "similarity": 0.7198,
-      "flags": [],
+      "flags": [
+        "group_unknown",
+        "statement_type_unknown"
+      ],
       "reason": "Same request despite conflicting quantity; review required"
     },
     {
@@ -283,7 +290,10 @@
       "semantic_union": true,
       "excluded_locations": [],
       "similarity": 0.7226,
-      "flags": [],
+      "flags": [
+        "group_unknown",
+        "statement_type_unknown"
+      ],
       "reason": "Delivery update for same water event, not permission to close"
     },
     {
@@ -308,7 +318,9 @@
       "excluded_locations": [],
       "similarity": 1.0,
       "flags": [
-        "possible_repost"
+        "possible_repost",
+        "group_unknown",
+        "statement_type_unknown"
       ],
       "reason": "Exact repeat should be reviewed against original"
     },
@@ -321,7 +333,10 @@
       "semantic_union": true,
       "excluded_locations": [],
       "similarity": 0.9133,
-      "flags": [],
+      "flags": [
+        "group_unknown",
+        "statement_type_unknown"
+      ],
       "reason": "Same place and diaper request"
     },
     {
@@ -334,6 +349,8 @@
       "excluded_locations": [],
       "similarity": 0.9143,
       "flags": [
+        "group_unknown",
+        "statement_type_unknown",
         "location_unverified"
       ],
       "reason": "Same school food request with abbreviated label"
@@ -395,7 +412,10 @@
       "semantic_union": true,
       "excluded_locations": [],
       "similarity": 0.8578,
-      "flags": [],
+      "flags": [
+        "group_unknown",
+        "statement_type_unknown"
+      ],
       "reason": "Separate households at same broad site; baseline ambiguity"
     },
     {
@@ -443,7 +463,10 @@
       "semantic_union": true,
       "excluded_locations": [],
       "similarity": 0.5683,
-      "flags": [],
+      "flags": [
+        "group_unknown",
+        "statement_type_unknown"
+      ],
       "reason": "Hypothetical need incorrectly submitted as a report; not a factual update"
     },
     {

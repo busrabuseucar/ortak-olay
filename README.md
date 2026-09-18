@@ -2,11 +2,13 @@
 
 Human-reviewed disaster needs tracking across Turkish, Greek and English reports.
 
-**Status: v0.3 coordinator prototype with optional local semantic retrieval.** This repository implements the review workflow behind the Greece–Türkiye Hackathon proposal. It is not a deployed emergency service. Matching defaults to a structured baseline. An optional pretrained multilingual model adds candidates for human review; it has not been trained on disaster reports. A Turkish coordinator dashboard is included. Free-text multilingual extraction remains a future milestone.
+**Status: v0.4 coordinator prototype with reviewer-entered report scope and optional local semantic retrieval.** This repository implements the review workflow behind the Greece–Türkiye Hackathon proposal. It is not a deployed emergency service. Matching defaults to a structured baseline. An optional pretrained multilingual model adds candidates for human review; it has not been trained on disaster reports. A Turkish coordinator dashboard is included. Free-text multilingual extraction remains a future milestone.
 
 ## What works
 
-- Persist original reports, source labels, language, event time and receipt time in SQLite.
+- Persist original reports, source labels, language, event time and receipt time in SQLite. Record optional group references and reviewer-assigned message types.
+- Exclude explicitly hypothetical/general-information reports from suggestions and need decisions. Prevent links between explicitly conflicting group references, including references in already linked sources.
+- Correct unlinked report scope with a reason, version check and visible audit history, preserving original text.
 - Suggest potentially related needs by manually entered location and need category, with a 24-hour event-time filter when times are known. Optionally add semantic candidates across Turkish, English and Greek, with source-linked similarity and different-location warnings.
 - Display quantity disagreements, incompatible units, missing timestamps and possible verbatim reposts.
 - Require an authenticated reviewer to create an event, link a report, split a mistaken grouping or change a need's status.
@@ -70,6 +72,25 @@ The walkthrough adds five reports. Running it again adds a new exercise; it neve
 
 Location labels and categories are still entered by the reviewer. The default baseline compares structured labels; optional semantic retrieval compares original text using a pretrained multilingual model. Neither mode extracts fields automatically or verifies facts. Greek examples are synthetic and have not been reviewed by a proficient speaker.
 
+## Reviewer-entered group and message scope
+
+These fields are **human annotations**, not extracted or verified by AI:
+
+| Field | Values / meaning |
+|---|---|
+| `group_ref` | Optional shared group/tent identifier, e.g. `tent-12`. Use the same identifier across languages; only case and whitespace are normalized. No translation or group identity inference occurs. |
+| `statement_type` | `unknown` (default), `need`, `update`, `hypothetical`, or `general_info`. `need` and `update` describe the coordinator's reading, not independently verified facts. |
+
+Reports marked `hypothetical` or `general_info` remain available for inspection but cannot suggest events, create needs, link to them, or act as status evidence. The UI hides the need decision form. They remain in the unlinked-report queue; archiving is not implemented. If the annotation was wrong, correct it in **Rapor değerlendirmesini düzelt** with a reason before linking.
+
+An event inherits its founding report's group reference. A known incoming group must not contradict the event's reference or any linked source's known reference. Such candidates appear as excluded with a reason, and the API rejects a manual link too. Unknown scope is not inferred or silently filled: it produces warnings and still permits a human decision. Group references are intended to be consistently assigned within the operating context; the prototype has no global group registry.
+
+`PATCH /reports/{id}/review` updates both scope fields of an **unlinked** report. Supply both fields, a reason and `expected_review_version`. The full original report text stays unchanged. `GET /reports/{id}` returns visible review history with actor, before/after values, reason and time. Linked scope is immutable in this version; correcting linked annotations and event scope is a future workflow. The UI sends `expected_review_version` when creating/linking; it is optional for older API clients. All decisions still enforce the current type/group rules server-side.
+
+Existing SQLite databases receive additive columns on startup. Original text, links, status, event versions and audit history remain intact; old reports start with unknown type and no group. The migration is repeatable and tested on a legacy database. There is no automatic backfill or classification of old records.
+
+The original 18-case evaluation supplies none of these new human annotations. Its matching counts therefore remain unchanged. Functional scope tests demonstrate rule enforcement when annotations are supplied; they do **not** establish text understanding or improve measured model accuracy.
+
 ## Optional local AI matching
 
 Install and launch from the same virtual environment:
@@ -104,7 +125,7 @@ On the same 18 synthetic, author-labelled pairs, the baseline retrieves 4 of 9 i
 python -m pytest -q
 ```
 
-The suite covers the application scenario, access control, status conflicts, evidence constraints, split history, category separation, time windows, validation, Greek text preservation and persistence. Passing these functional tests does not measure matching precision, clinical outcomes or disaster-response impact.
+The suite covers the application scenario, access control, status conflicts, evidence constraints, split history, category separation, time windows, validation, Greek text preservation, scope rules, audited classification correction, legacy migration and persistence. Passing these functional tests does not measure matching precision, clinical outcomes or disaster-response impact.
 
 The optional browser regression starts an isolated local server and temporary database. It exercises login, report creation, conflicts, linking, delivery status, splitting, stale decisions, safe text rendering, mobile layout, validation and logout through the interface:
 
@@ -122,6 +143,8 @@ Both suites run in GitHub Actions. The browser dependency is used only for testi
 |---|---|---|
 | POST | `/reports` | Submit one structured need report |
 | GET | `/reports?pending=true` | Review unlinked reports |
+| GET | `/reports/{id}` | Read report and scope-review history |
+| PATCH | `/reports/{id}/review` | Correct unlinked scope with reason and version |
 | GET | `/reports/{id}/suggestions` | Inspect candidate methods, source evidence and flags |
 | POST | `/reports/{id}/new-event` | Approve a separate need event |
 | POST | `/reports/{id}/link` | Link a report after review |
@@ -135,7 +158,7 @@ All data endpoints require a bearer token. `/health` and API schema documentatio
 ## Data and decisions
 
 - Original text is immutable through the API. Mistaken links can be split with an audit trail.
-- An event represents a location and one need category. Quantities remain source claims; the prototype never silently selects a single true quantity.
+- An event represents a location, one need category and an optional group reference. Quantities remain source claims; the prototype never silently selects a single true quantity.
 - Reviewers may link different location labels when they confirm an alias; the baseline suggests exact labels, ignoring case. Semantic mode may suggest different labels, always with a location warning.
 - Splitting creates an open event. The previous event's status remains unchanged and its historical decisions remain visible, even if it has no remaining reports.
 - Audit records are append-only through this API, not cryptographically tamper-proof. A database administrator can modify the database.
@@ -143,7 +166,7 @@ All data endpoints require a bearer token. `/health` and API schema documentatio
 
 ## Next milestones
 
-See [ROADMAP.md](ROADMAP.md). The coordinator interface now connects incoming reports, event details and review decisions. Optional multilingual matching now has a reproducible development comparison. Next, reduce location errors, add source-linked extraction, build independently labelled evaluation cases, and validate the workflow with a coordinator.
+See [ROADMAP.md](ROADMAP.md). The coordinator interface now connects incoming reports, event details and review decisions. Optional multilingual matching now has a reproducible development comparison. Next, validate the review workflow with a coordinator, then build source-linked extraction and independently labelled evaluation cases. Scope rules now work with explicit human annotations; automatic group/statement extraction is not implemented.
 
 ## Team
 

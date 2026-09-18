@@ -114,7 +114,7 @@ def test_validation_and_duplicate_approval(client):
     r = report(client)
     approve(client, r)
     assert client.post(f"/reports/{r['id']}/new-event", json={"reason": "Second approval"}).status_code == 409
-    data = {k: v for k, v in r.items() if k not in ["id", "received_at", "event_id"]}
+    data = {k: v for k, v in r.items() if k not in ["id", "received_at", "event_id", "review_version"]}
     for patch in [{"text": " "}, {"quantity": -1}, {"reported_at": "2026-09-01T10:00:00"}, {"unit": None}, {"reported_at": "2999-01-01T10:00:00Z"}]:
         assert client.post("/reports", json=data | patch).status_code == 422
 

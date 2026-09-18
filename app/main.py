@@ -1,4 +1,4 @@
-"""Local prototype API. No autonomous decisions or trained model."""
+"""Local prototype API. Human decisions with optional pretrained candidate retrieval."""
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import json
@@ -10,6 +10,8 @@ from typing import Literal
 from uuid import uuid4
 
 from app.matching import LocalSemanticEncoder, suggest
+from app.migrations import migrate
+from app.report_scope import NON_FACTUAL, group_conflict
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -22,7 +24,12 @@ class Input(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
 
-class Report(Input):
+class Scope(Input):
+    group_ref: str | None = Field(default=None, min_length=1, max_length=100)
+    statement_type: Literal["unknown", "need", "update", "hypothetical", "general_info"] = "unknown"
+
+
+class Report(Scope):
     text: str = Field(min_length=1, max_length=5000)
     language: Literal["tr", "el", "en"]
     source: str = Field(min_length=1, max_length=200)
@@ -37,7 +44,16 @@ class Decision(Input):
     reason: str = Field(min_length=3, max_length=1000)
 
 
-class Link(Decision):
+class Review(Scope):
+    reason: str = Field(min_length=3, max_length=1000)
+    expected_review_version: int = Field(ge=1)
+
+
+class ReportDecision(Decision):
+    expected_review_version: int | None = Field(default=None, ge=1)
+
+
+class Link(ReportDecision):
     event_id: str = Field(min_length=1)
 
 
@@ -89,6 +105,7 @@ def create_app(db_path=None, reviewers=None, encoder=None):
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(db_path) as connection:
         connection.executescript(SCHEMA)
+        migrate(connection)
 
     @contextmanager
     def database(write=False):
@@ -129,7 +146,7 @@ def create_app(db_path=None, reviewers=None, encoder=None):
         raise HTTPException(401, "Valid reviewer token required", headers={"WWW-Authenticate": "Bearer"})
 
     api = FastAPI(
-        title="Ortak Olay", version="0.3.0",
+        title="Ortak Olay", version="0.4.0",
         description="Synthetic-exercise prototype. Structured reports, baseline suggestions and human decisions. Optional local multilingual model for candidate retrieval; no operational validation.",
     )
 
@@ -153,7 +170,7 @@ def create_app(db_path=None, reviewers=None, encoder=None):
 
     @api.get("/health")
     def health():
-        return {"status": "ok", "version": "0.3.0", "stage": "local-prototype"}
+        return {"status": "ok", "version": "0.4.0", "stage": "local-prototype"}
 
     @api.post("/reports", status_code=201)
     def add_report(item: Report, actor=Depends(reviewer)):
@@ -166,8 +183,8 @@ def create_app(db_path=None, reviewers=None, encoder=None):
         data.update(id=str(uuid4()), received_at=now())
         with database(True) as connection:
             connection.execute(
-                "INSERT INTO reports(id,text,language,source,location,need,quantity,unit,reported_at,received_at) "
-                "VALUES(:id,:text,:language,:source,:location,:need,:quantity,:unit,:reported_at,:received_at)", data)
+                "INSERT INTO reports(id,text,language,source,location,need,quantity,unit,reported_at,received_at,group_ref,statement_type) "
+                "VALUES(:id,:text,:language,:source,:location,:need,:quantity,:unit,:reported_at,:received_at,:group_ref,:statement_type)", data)
             log(connection, actor, "report_created", report_id=data["id"])
             return get(connection, "reports", data["id"])
 
@@ -176,6 +193,29 @@ def create_app(db_path=None, reviewers=None, encoder=None):
         with database() as connection:
             sql = "SELECT * FROM reports" + (" WHERE event_id IS NULL" if pending else "")
             return [dict(r) for r in connection.execute(sql + " ORDER BY received_at,id LIMIT ? OFFSET ?", (limit, offset))]
+
+    @api.get("/reports/{report_id}")
+    def report_detail(report_id: str, actor=Depends(reviewer)):
+        with database() as connection:
+            result = get(connection, "reports", report_id)
+            result["review_history"] = [dict(r) for r in connection.execute(
+                "SELECT * FROM audit WHERE report_id=? AND action='report_reviewed' ORDER BY sequence", (report_id,))]
+            return result
+
+    @api.patch("/reports/{report_id}/review")
+    def review_report(report_id: str, decision: Review, actor=Depends(reviewer)):
+        with database(True) as connection:
+            report = get(connection, "reports", report_id)
+            if report["event_id"]:
+                raise HTTPException(409, "Linked report scope cannot be edited")
+            if report["review_version"] != decision.expected_review_version:
+                raise HTTPException(409, "Report review changed; refresh before deciding")
+            before = {k: report[k] for k in ("group_ref", "statement_type")}
+            after = decision.model_dump(include={"group_ref", "statement_type"})
+            connection.execute("UPDATE reports SET group_ref=?,statement_type=?,review_version=review_version+1 WHERE id=?",
+                               (decision.group_ref, decision.statement_type, report_id))
+            log(connection, actor, "report_reviewed", report_id=report_id, before=before, after=after, reason=decision.reason)
+            return get(connection, "reports", report_id)
 
     @api.get("/events")
     def events(limit: int = Query(100, ge=1, le=500), offset: int = Query(0, ge=0), actor=Depends(reviewer)):
@@ -202,10 +242,19 @@ def create_app(db_path=None, reviewers=None, encoder=None):
         # Release the database connection before model inference.
         return suggest(report, groups, encoder=encoder)
 
+    def check_review_version(report, decision):
+        if decision.expected_review_version is not None and report['review_version'] != decision.expected_review_version:
+            raise HTTPException(409, "Report review changed; refresh before deciding")
+
+    def require_factual(report):
+        if report['statement_type'] in NON_FACTUAL:
+            raise HTTPException(422, "Non-factual reports cannot create or update needs")
+
     def new_event(connection, report, actor, reason, split=False):
+        require_factual(report)
         old = report["event_id"]
         event_id = str(uuid4())
-        connection.execute("INSERT INTO events(id,location,need,created_at) VALUES(?,?,?,?)", (event_id, report["location"], report["need"], now()))
+        connection.execute("INSERT INTO events(id,location,need,created_at,group_ref) VALUES(?,?,?,?,?)", (event_id, report["location"], report["need"], now(), report["group_ref"]))
         connection.execute("UPDATE reports SET event_id=? WHERE id=?", (event_id, report["id"]))
         log(connection, actor, "report_split" if split else "event_created", report_id=report["id"], event_id=event_id, previous_event_id=old, reason=reason)
         if old:
@@ -214,11 +263,12 @@ def create_app(db_path=None, reviewers=None, encoder=None):
         return get(connection, "events", event_id)
 
     @api.post("/reports/{report_id}/new-event", status_code=201)
-    def approve_new(report_id: str, decision: Decision, actor=Depends(reviewer)):
+    def approve_new(report_id: str, decision: ReportDecision, actor=Depends(reviewer)):
         with database(True) as connection:
             report = get(connection, "reports", report_id)
             if report["event_id"]:
                 raise HTTPException(409, "Report already linked; use split to correct it")
+            check_review_version(report, decision)
             return new_event(connection, report, actor, decision.reason)
 
     @api.post("/reports/{report_id}/link")
@@ -226,6 +276,11 @@ def create_app(db_path=None, reviewers=None, encoder=None):
         with database(True) as connection:
             report = get(connection, "reports", report_id)
             e = get(connection, "events", decision.event_id)
+            require_factual(report)
+            check_review_version(report, decision)
+            linked = [dict(r) for r in connection.execute("SELECT * FROM reports WHERE event_id=?", (e["id"],))]
+            if group_conflict(report, e, linked):
+                raise HTTPException(422, "Different group references must remain separate")
             if report["event_id"]:
                 raise HTTPException(409, "Report already linked")
             if e["need"] != report["need"]:
@@ -236,11 +291,12 @@ def create_app(db_path=None, reviewers=None, encoder=None):
             return get(connection, "events", e["id"])
 
     @api.post("/reports/{report_id}/split", status_code=201)
-    def split(report_id: str, decision: Decision, actor=Depends(reviewer)):
+    def split(report_id: str, decision: ReportDecision, actor=Depends(reviewer)):
         with database(True) as connection:
             report = get(connection, "reports", report_id)
             if not report["event_id"]:
                 raise HTTPException(409, "Unlinked report; use new-event")
+            check_review_version(report, decision)
             return new_event(connection, report, actor, decision.reason, split=True)
 
     @api.patch("/events/{event_id}/status")
@@ -248,6 +304,7 @@ def create_app(db_path=None, reviewers=None, encoder=None):
         with database(True) as connection:
             e = get(connection, "events", event_id)
             evidence = get(connection, "reports", decision.evidence_report_id)
+            require_factual(evidence)
             if evidence["event_id"] != event_id:
                 raise HTTPException(422, "Evidence report must be linked to this event")
             if e["version"] != decision.expected_version:

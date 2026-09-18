@@ -37,3 +37,13 @@ python scripts/run_local.py --semantic
 18 yapay örnekte model 9 ilgili çiftin 7’sini buldu. Yeni konum kodu kontrolü, bu doğru önerileri koruyarak yanlış adayları 5’ten 2’ye düşürdü. Bu kontrol aynı örneklerdeki hatalara bakılarak geliştirildi; bağımsız başarı ölçümü değildir. “Barınak A / Barınak B” gibi kod çelişkileri ayrı gösterilir; aynı yerdeki farklı gruplar ve varsayımsal mesajlar hâlâ sorun çıkarabilir. Bu nedenle varsayılan hâlâ konum/kategori kuralıdır. Ölçümün ayrıntıları `evaluation/README.md` dosyasında. Serbest metinden otomatik bilgi çıkarımı, bağımsız değerlendirme ve gerçek kullanıcı doğrulaması sonraki aşamalar.
 
 Portföyünde doğru ifade: “Ortak Olay için kaynak metinleri koruyan, insan onaylı ihtiyaç takibi ve yerel çok dilli benzerlik önerileri içeren bir prototip geliştiriyorum.” Saha kullanımı ve gerçek kullanıcı doğrulaması henüz yapılmadı.
+
+## Grup ve mesaj türü kontrolü
+
+Yeni raporda **Grup / çadır kodu** ve **Mesajın türü** alanları var. Aynı grup için her dilde aynı kodu kullan; bilmiyorsan boş bırak. Tür seçenekleri: belirsiz, ihtiyaç bildirimi, güncelleme/teslimat, varsayımsal durum, genel bilgi/tavsiye.
+
+Varsayımsal ve genel bilgi olarak işaretlenen mesajlardan ihtiyaç açılamaz. Farklı olduğu açıkça belirtilen gruplar aynı ihtiyaca bağlanamaz. Bilgi eksikse sistem uyarır; kendisi grup veya mesaj türü uydurmaz. Bu alanları sen değerlendiriyorsun, yapay zekâ değil.
+
+Yanlış sınıflandırılan ve henüz bağlanmamış raporu **Rapor değerlendirmesini düzelt** bölümünden gerekçeyle güncelleyebilirsin. Kaynak mesaj korunur; kim, neyi, neden değiştirdi görünür. Bağlandıktan sonra bu alanlar bu sürümde değiştirilemez.
+
+Eski veritabanı açıldığında yeni alanlar otomatik eklenir. Eski raporlar, bağlantılar ve geçmiş korunur; eski kayıtlar için sınıflandırma yapılmış gibi gösterilmez.

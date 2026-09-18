@@ -38,3 +38,9 @@ All cases are short and manually structured. They do not establish robustness to
 Previously approved location aliases are not reused automatically. A typo in a site code can therefore suppress a valid suggestion; users can inspect exclusions and manually link after verifying the original source. Cross-type or unrecognized labels are left unresolved.
 
 Keep semantic mode opt-in. Collect independently labelled scenarios with native-speaker review, partition by scenario family before tuning, evaluate on untouched cases, and record coordinator corrections. Prioritize location identity, negation and source-time handling before any controlled pilot. No disaster-response impact, lives saved, user approval or field deployment is claimed.
+
+## v0.4 human annotations are a separate capability
+
+The original fixture omits group references and message-type annotations. Its two residual false candidates remain residual errors; the reported matching metrics are not improved by assuming perfect labels. `tests/test_report_scope.py` separately verifies that correctly supplied `tent-12`/`tent-98` references are kept apart and explicitly hypothetical/general-information reports cannot become needs. `browser_tests/test_scope.py` exercises annotation correction, visible history and group-link rejection through the UI.
+
+This is rule enforcement given human input, not evidence that a model understands a hypothetical or extracts a group correctly. Unknown annotations remain allowed with warnings. Wrong annotations can still suppress valid needs or permit wrong groupings. Independent source-linked extraction and coordinator validation remain outstanding.
