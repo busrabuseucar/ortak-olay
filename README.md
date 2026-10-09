@@ -204,6 +204,8 @@ All data endpoints require a bearer token. `/health` and API schema documentatio
 
 ## Next milestones
 
+The [first coordinator exercise package](docs/exercise/README.md) provides six Turkish synthetic task cards, an observer setup guide and a blank session record. It is preparation for qualitative usability research, not evidence of user validation or measured time savings.
+
 See [ROADMAP.md](ROADMAP.md). The coordinator interface now connects incoming reports, event details and review decisions. Optional multilingual matching now has a reproducible development comparison. Next, validate the recovery and review workflows with a coordinator, then build source-linked extraction and independently labelled evaluation cases. Scope rules now work with explicit human annotations; automatic group/statement extraction is not implemented.
 
 ## Team
