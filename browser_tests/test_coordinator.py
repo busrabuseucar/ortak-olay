@@ -113,14 +113,15 @@ def test_coordinator_journey(server):
         expect(page.locator('#closed-count')).to_have_text('1')
         expect(page.locator('#pending-count')).to_have_text('1')
 
-        # Link and split the repost, preserving the fulfilled source event.
+        # Split preserves historical status but puts the source event back into review.
         decide('Tatbikat için tekrar kaydı bağlandı', water_id)
         page.get_by_role('button', name='Raporu incele / bağlantıyı düzelt').last.click()
         page.locator('#split-reason').fill('Farklı grup olduğu doğrulandı')
         page.get_by_role('button', name='Raporu ayrı kayda taşı').click()
         expect(page.locator('#detail')).to_contain_text('Rapor ayrı bir kayda taşındı')
-        expect(page.locator('#active-count')).to_have_text('2')
-        expect(page.locator('#closed-count')).to_have_text('1')
+        expect(page.locator('#active-count')).to_have_text('3')
+        expect(page.locator('#closed-count')).to_have_text('0')
+        expect(page.locator('#record-list')).to_contain_text('Karşılandı · Yeniden inceleme gerekli')
 
         # Stale reviewer decisions must remain visible and must not overwrite newer data.
         page.locator('#status-reason').fill('Eski ekran üzerinden karar')
@@ -163,7 +164,7 @@ def test_coordinator_journey(server):
             expect(page.locator('.candidate')).to_have_count(0)
             # Human correction remains possible; this is a synthetic label-error decision.
             decide('Tatbikat: kaynak konum etiketinin yanlış olduğu doğrulandı', water_id)
-            expect(page.locator('#detail .detail-header .badge')).to_have_text('Karşılandı')
+            expect(page.locator('#detail .detail-header .badge')).to_have_text('Karşılandı · Yeniden inceleme gerekli')
         page.get_by_role('button', name='Oturumu kapat', exact=True).click()
         expect(page.locator('#dashboard')).not_to_be_visible()
         assert page.locator('#detail').inner_text() == ''
