@@ -4,6 +4,37 @@ Human-reviewed disaster needs tracking across Turkish, Greek and English reports
 
 **Status: v0.4 coordinator prototype with reviewer-entered report scope and optional local semantic retrieval.** This repository implements the review workflow behind the Greece–Türkiye Hackathon proposal. It is not a deployed emergency service. Matching defaults to a structured baseline. An optional pretrained multilingual model adds candidates for human review; it has not been trained on disaster reports. A Turkish coordinator dashboard is included. Free-text multilingual extraction remains a future milestone.
 
+## Start with the coordinator's task
+
+A new message can be a new need, an old request reposted, or an update to a known need. Ortak Olay brings the original sources and candidate relationships together so a human can decide and leave an accountable history.
+
+The initial setting is a disaster-response exercise involving basic supplies and shelter reports. Whether this workflow reduces a real coordinator's workload remains unverified. Manual entry and correction time must count when measuring any benefit.
+
+### Current capability versus planned work
+
+| Capability | Current state |
+|---|---|
+| Report entry, source preservation, per-need status and audited decisions | Implemented local prototype; follow the walkthrough below |
+| Multilingual candidate retrieval | Optional pretrained local embeddings; structured baseline remains the default |
+| Free-text extraction and evidence spans | Planned; location/category and other structured facts are currently entered by the reviewer |
+| Missing information | Quantity/unit, event time and group can be unknown; location and need category are required. Missing location is not yet a supported intake workflow |
+| Correct report scope | Group/type can be corrected before linking only. Linked scope correction is a priority gap |
+| Reject a suggested relationship | No persistent rejection decision yet; choosing not to link does not record rejection |
+| Resolve irrelevant messages | Explicit non-factual types block need decisions, but remain in the pending queue; reversible dismissal is planned |
+| CSV exercise imports | Planned; manual entry and the scripted synthetic walkthrough exist |
+| Independent evaluation and coordinator study | Pending; the existing 18-pair check is a development fixture |
+| Public operational service | Not deployed; local exercise prototype only |
+
+The [development check](evaluation/README.md) reports both useful matches and errors; it does not establish time savings or operational accuracy. Existing functional tests verify application behavior, not user benefit.
+
+### Next work and evidence
+
+1. [Coordinator interview and recording guide (Turkish)](docs/COORDINATOR_RESEARCH_TR.md): establish the current workflow before extending scope.
+2. [Prioritized delivery roadmap](ROADMAP.md): close correction and rejection gaps before broader automation.
+3. [Proposed evaluation protocol](docs/VALIDATION_PLAN.md): separate development fixtures, independent matching tests and user tasks.
+
+These documents contain plans and blank recording templates, not completed interviews, recruited partners or achieved targets. No working-demo video or screenshot is linked yet; the executable walkthrough and setup below are the current demonstration materials.
+
 ## What works
 
 - Persist original reports, source labels, language, event time and receipt time in SQLite. Record optional group references and reviewer-assigned message types.

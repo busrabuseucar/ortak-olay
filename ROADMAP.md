@@ -1,35 +1,59 @@
 # Development roadmap
 
-## Completed foundation
+Updated 2026-10-09. Application language does not establish implementation status. The existing application remains v0.4; this documentation revision adds no runtime capability.
 
-Structured report API, SQLite persistence, human decisions, per-need status, evidence links, audit history, rule-based matching baseline and a synthetic scenario test suite. A responsive Turkish coordinator dashboard now serves from `/` and connects to the authenticated API. Reviewer-entered group/type annotations, audited pre-link corrections and additive legacy migration are implemented. Explicit non-factual types cannot become needs, and conflicting known groups cannot be linked. Unknown annotations remain uncertain.
+## Existing foundation
 
-## Milestone 1 — Coordinator interface implemented, user validation pending
+Python/FastAPI, SQLite, authenticated Turkish coordinator interface, immutable source reports, separate need events, reason/evidence-linked status changes, split history, optional multilingual semantic retrieval and manual group/type annotations are implemented. See [README](README.md) for capability limits and [evaluation](evaluation/README.md) for the 18-pair development check.
 
-Incoming-report, event-detail and review-decision views are implemented. Show original language and source text beside any future extraction. Surface quantity disagreements, unknown timestamps and status evidence. Preserve decisions across restarts. Test keyboard operation, errors, stale version conflicts, linking and splitting with a complete exercise.
+## Priority 1 - Confirm the coordinator task (pending)
 
-Acceptance: a reviewer completes the five-message scenario without invoking API endpoints manually. Record completion time and corrections without inventing performance improvements.
+Use the [interview guide](docs/COORDINATOR_RESEARCH_TR.md). Seek three coordinator interviews and two anonymised workflow examples. Recruitment is not secured; these counts are planning targets.
 
-## Milestone 2 — Local semantic retrieval implemented; independent evaluation pending
+Establish the current tools, decision owner, recurring ambiguity, information required to close a need and burden of entering structured fields. Record contradictory feedback as well as support.
 
-Implemented: optional local multilingual embeddings, source-linked similarity scores, explicit fallback, and an 18-pair synthetic development comparison in `evaluation/`. A subsequent narrow site-code guard removes three known false candidates without losing intended matches in that fixture. The guard was designed from those failures, so independent evaluation is still pending; default matching remains the baseline.
+Acceptance: permissioned, anonymised notes; a concrete existing workflow; an explicit keep/change/stop decision and the product changes it supports. If interviews are unavailable, keep the exercise prototype label and report the dependency rather than inventing validation.
 
-Next: validate the added annotation burden and correction workflow with a coordinator; support correction of linked scope before considering a pilot. Then define a provider interface that returns extracted fields and exact source spans. Unknown facts must remain unknown. Improve location disambiguation and compare semantic retrieval with the retained structured baseline. Do not let model outputs call mutation endpoints or approve decisions.
+## Priority 2 - Make review decisions recoverable (not implemented)
 
-Build independently labelled TR/EL/EN exercise cases, reviewed by appropriate speakers. Partition by scenario family before tuning so reposts and translations do not leak across partitions. Include distinct shelters with similar names, different units, conflicting quantities, old reposts, negation and partial fulfilment. Report sample counts, precision, recall and false merges by language and scenario. Do not treat a small synthetic evaluation as real-world validation.
+### Linked scope correction
 
-Acceptance: reproducible held-out results for both the baseline and candidate model, with error examples, thresholds and model version recorded. No numerical target is claimed as achieved.
+Allow a reviewer to correct group/type after a report is linked without altering its original text. Design the affected report/event transaction first: preserve the old values and reason, detect stale edits, and surface implications for group consistency and earlier status evidence. Simply splitting a report into a new event does not make its scope editable today.
 
-## Milestone 3 — User evidence
+Acceptance: a wrongly classified or grouped linked report can be corrected through the UI; conflicts and affected evidence are explicitly handled; no history is silently erased; another reviewer's stale correction is rejected. The final policy for reopening affected needs must be agreed with coordinators before implementation.
 
-Ask a disaster-response coordinator to describe a real workflow using anonymized or synthetic examples. Establish how they decide whether a report is a repeat, an update or a different group; which information they need to close a request; and how mistakes are corrected. Obtain permission before documenting their feedback.
+### Persistent candidate rejection and reversible dismissal
 
-Acceptance: a documented workflow, concrete corrections to the prototype, and a supervised usability exercise. Never write a planned interview as a completed interview.
+Record a rejection against the report-event relationship, with actor, reason and evidence version. Distinguish rejected relationships from irrelevant reports. Provide a reversible way to resolve irrelevant reports out of the pending queue while preserving source/history.
 
-## Milestone 4 — Controlled pilot readiness
+Acceptance: a rejected unchanged suggestion is identifiable after reload; new evidence can trigger explicit reconsideration; dismiss/restore actions are audited; a factual unresolved need is not silently discarded. Confirm this interaction with users.
 
-Add organization-level authorization, user accounts, token rotation, TLS, request limits, monitoring, backups, retention rules and database migrations. Review source permissions and data minimization with the pilot organization. Perform load and recovery tests with synthetic data before a supervised pilot. SQLite and the current token map are local-prototype choices, not a multi-organization deployment design.
+### Unknown location at intake
+
+Currently location/category are mandatory. Determine whether users need a separate unclassified intake state. Do not substitute the same literal 'unknown' location for every report: it could create false matches.
+
+Acceptance, if approved: unknown identity remains distinct from a confirmed shared location and cannot itself justify matching.
+
+## Priority 3 - Narrow extraction and controlled imports (planned)
+
+Start with one need category, such as water. Add a provider interface for proposed fields and exact source spans, schema validation, unknown values and reviewer correction. Model output must not invoke decision/mutation endpoints. Model selection, cost and data handling are not settled by this plan.
+
+Add CSV preview, row-level validation and explicit import confirmation for synthetic exercise data. Define duplicate-import behavior before claiming reproducibility.
+
+Acceptance: an original message yields editable proposed fields with source support; unsupported values remain unresolved; failed extraction leaves manual entry available; structured facts and extraction corrections are distinguishable in the audit record.
+
+## Priority 4 - Independent evaluation and measured workload (pending)
+
+Follow [the proposed protocol](docs/VALIDATION_PLAN.md). Keep the existing 18 cases as development/regression examples. Freeze new scenario-family partitions before tuning. Evaluate candidate retrieval, extraction, final need decisions and full user workload separately.
+
+Acceptance: independently reviewed labels, frozen test partition, baseline comparisons, error examples and reproducible configuration. Publish null or negative results too. Proposed dataset sizes and the 20% time target are not achieved results and are not a statistical power calculation.
+
+## Priority 5 - Controlled pilot readiness (future)
+
+Only after user evidence and recovery workflows: organization-level authorization, user accounts, token rotation, TLS, request limits, monitoring, backups, retention rules and recovery/load tests. Review source permissions and data minimization with a prospective partner. SQLite and the current token map are local-prototype choices, not a multi-organization deployment design.
+
+Acceptance: an agreed supervised exercise/pilot plan and its technical gates. No partner or field deployment is currently established by this roadmap.
 
 ## Portfolio evidence
 
-Keep commits attributable to the actual author/reviewer, document AI assistance accurately, record a short working demo, publish repeatable setup instructions and explain known limitations. CV claims should state implemented and tested functions; field deployments, impact numbers and model accuracy require their own evidence.
+Publish a short reproducible demo and clear current/planned feature list. Attribute actual contributions and AI assistance accurately. Never turn prototype tests, finalist status or planned roles into claims of operational impact or completed team authorship.
