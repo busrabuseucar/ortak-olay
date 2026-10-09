@@ -65,7 +65,7 @@ def test_report_scope_journey(server):
         page.get_by_role('button', name='Kararı onayla ve kaydet').click()
         expect(page.locator('#detail .detail-header .badge')).to_have_text('Açık')
         page.get_by_role('button', name='Raporu incele / bağlantıyı düzelt').last.click()
-        expect(page.locator('#review-form')).to_have_count(0)
+        expect(page.locator('#review-form')).to_be_visible()
         expect(page.locator('#detail')).to_contain_text('Kaynakla görüşüldü; gerçek ihtiyaç bildirimi')
         page.set_viewport_size({'width': 390, 'height': 844})
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')

@@ -34,6 +34,9 @@ const flagLabels = {
   fulfilled_need_requires_review: "Karşılanmış ihtiyaç: tekrar kontrol et",
 };
 const actionLabels = {
+  scope_correction_detached: "Bilgi düzeltildi; bağlantı kaldırıldı, yeniden inceleme gerekli",
+  candidate_reject: "Eşleşme önerisi reddedildi",
+  candidate_restore: "Eşleşme önerisi yeniden değerlendirmeye açıldı",
   event_created: "İhtiyaç kaydı oluşturuldu",
   report_linked: "Rapor bağlandı",
   report_split: "Rapor ayrı bir kayda taşındı",
@@ -58,8 +61,8 @@ const date = (value) =>
         timeStyle: "short",
       }).format(new Date(value))
     : "Bilinmiyor";
-const badge = (status) =>
-  `<span class="badge ${esc(status)}">${esc(statuses[status] || status)}</span>`;
+const badge = (status, reviewRequired = false) =>
+  `<span class="badge ${esc(status)}">${esc(statuses[status] || status)}${reviewRequired ? " · Yeniden inceleme gerekli" : ""}</span>`;
 const empty = (title, text) =>
   `<div class="empty"><div class="empty-symbol" aria-hidden="true">◎</div><h2>${esc(title)}</h2><p>${esc(text)}</p></div>`;
 function notice(text, error = false) {
@@ -105,6 +108,10 @@ async function api(path, method = "GET", body) {
   }
   if (!res.ok) {
     const known = {
+      "Confirm detachment with current event version": "Bağlantıyı kaldırmayı onayla. Kayıt değiştiyse yenileyip tekrar incele.",
+      "Candidate evidence changed; refresh": "Kaynak bilgileri değişti. Yenile ve tekrar incele.",
+      "Candidate decision changed; refresh": "Öneri kararı değişti. Yenile ve tekrar incele.",
+      "Restore rejected candidate before linking": "Önce reddedilen öneriyi gerekçeyle yeniden değerlendirmeye aç.",
       "Different group references must remain separate": "Grup kodları farklı. Ayrı kayıt oluştur veya rapor bilgisini doğrulayıp düzelt.",
       "Non-factual reports cannot create or update needs": "Varsayımsal veya genel bilgi mesajı ihtiyaç kaydında kullanılamaz. Sınıflandırmayı kontrol et.",
       "Report review changed; refresh before deciding": "Rapor değerlendirmesi değişti. Yenile ve tekrar kontrol et.",
@@ -180,10 +187,10 @@ async function load() {
   state.events = events;
   $("pending-count").textContent = reports.filter((r) => !r.event_id).length;
   $("active-count").textContent = events.filter(
-    (e) => e.status !== "fulfilled",
+    (e) => e.status !== "fulfilled" || e.review_required,
   ).length;
   $("closed-count").textContent = events.filter(
-    (e) => e.status === "fulfilled",
+    (e) => e.status === "fulfilled" && !e.review_required,
   ).length;
   renderList();
 }
@@ -225,7 +232,7 @@ function renderList() {
         .reverse()
         .map(
           (r) =>
-            `<button class="record" data-select="${esc(r.id)}" aria-current="${state.selected === r.id}"><div class="record-top"><span class="badge">${esc(needs[r.need])}</span>${isReport ? `<span class="small">${esc(languages[r.language])}</span>` : badge(r.status)}</div><strong>${esc(r.location)}</strong><p>${esc(isReport ? r.text : `${statuses[r.status]} · İhtiyaç kaydı`)}</p><small>${isReport ? (r.event_id ? "Bağlandı" : "İnceleme bekliyor") : "Oluşturuldu"} · ${esc(date(isReport ? r.received_at : r.created_at))}</small></button>`,
+            `<button class="record" data-select="${esc(r.id)}" aria-current="${state.selected === r.id}"><div class="record-top"><span class="badge">${esc(needs[r.need])}</span>${isReport ? `<span class="small">${esc(languages[r.language])}</span>` : badge(r.status, r.review_required)}</div><strong>${esc(r.location)}</strong><p>${esc(isReport ? r.text : `${statuses[r.status]} · İhtiyaç kaydı`)}</p><small>${isReport ? (r.event_id ? "Bağlandı" : "İnceleme bekliyor") : "Oluşturuldu"} · ${esc(date(isReport ? r.received_at : r.created_at))}</small></button>`,
         )
         .join("")
     : empty(
@@ -266,7 +273,7 @@ async function selectRecord(id) {
         })),
       );
       if (view !== state.view) return;
-      renderReport(report, candidates, result.matching);
+      renderReport(report, candidates, result.matching, result.rejections || []);
     }
   } catch (e) {
     if (view === state.view) {
@@ -293,24 +300,30 @@ function scopeReview(r) {
   const options = Object.entries(statementTypes).map(([k,v]) => `<option value="${k}" ${r.statement_type === k ? "selected" : ""}>${esc(v)}</option>`).join("");
   const history = (r.review_history || []).map(h => {
     let d = {}; try { d = JSON.parse(h.details); } catch {}
-    return `<li><strong>${esc(h.actor)}</strong> · ${esc(date(h.timestamp))}<p>${esc(d.reason)}</p><p>${esc(statementTypes[d.before?.statement_type])} → ${esc(statementTypes[d.after?.statement_type])} · Grup: ${esc(d.before?.group_ref || "Bilinmiyor")} → ${esc(d.after?.group_ref || "Bilinmiyor")}</p></li>`;
+    return `<li><strong>${esc(h.actor)}</strong> · ${esc(date(h.timestamp))}<p>${esc(d.reason)}</p><p>${esc(h.action === "report_reviewed" ? `${statementTypes[d.before?.statement_type]} → ${statementTypes[d.after?.statement_type]}` : actionLabels[h.action])} · Grup: ${esc(d.before?.group_ref || "Bilinmiyor")} → ${esc(d.after?.group_ref || "Bilinmiyor")}</p></li>`;
   }).join("");
-  return `${!r.event_id ? `<form id="review-form" class="decision-box" data-version="${r.review_version}"><h3>Rapor değerlendirmesini düzelt</h3><p class="small">Kaynak mesaj korunur. Bu alanları sen değerlendirirsin; model doğrulaması değildir. Bağlandıktan sonra bu alanlar değiştirilemez.</p><label for="review-group">Grup / çadır kodu (biliniyorsa)</label><input id="review-group" maxlength="100" value="${esc(r.group_ref || "")}"><label for="review-statement">Mesajın türü</label><select id="review-statement">${options}</select><label for="review-reason">Düzeltme gerekçesi</label><textarea id="review-reason" required minlength="3" maxlength="1000"></textarea><div class="actions"><button type="submit" class="secondary">Değerlendirmeyi kaydet</button></div></form>` : ""}${history ? `<h3>Değerlendirme geçmişi</h3><ol class="history">${history}</ol>` : ""}`;
+  return `${`<form id="review-form" class="decision-box" data-version="${r.review_version}" data-event-version="${r.linked_event_version || ""}"><h3>Rapor değerlendirmesini düzelt</h3><p class="small">Kaynak mesaj korunur. Bu alanları sen değerlendirirsin; model doğrulaması değildir. Bağlı rapor düzeltilirse bağlantısı kaldırılır; eski ihtiyaç yeniden inceleme gerektirir.</p><label for="review-group">Grup / çadır kodu (biliniyorsa)</label><input id="review-group" maxlength="100" value="${esc(r.group_ref || "")}"><label for="review-statement">Mesajın türü</label><select id="review-statement">${options}</select>${r.event_id ? `<label><input type="checkbox" id="review-detach" required> Bağlantının kaldırılmasını ve eski ihtiyacın yeniden incelenmesini onaylıyorum.</label>` : ""}<label for="review-reason">Düzeltme gerekçesi</label><textarea id="review-reason" required minlength="3" maxlength="1000"></textarea><div class="actions"><button type="submit" class="secondary">Değerlendirmeyi kaydet</button></div></form>`}${history ? `<h3>Değerlendirme geçmişi</h3><ol class="history">${history}</ol>` : ""}`;
 }
 function candidateMethod(c) {
   const names = {"baseline+semantic-v1": "Konum/kategori ve anlamsal benzerlik", "semantic-v1": "Anlamsal benzerlik", "structured-baseline-v1": "Konum/kategori kuralı"};
   return `<p class="small">${esc(names[c.method] || c.method)}${c.similarity !== null && c.similarity !== undefined ? ` · Benzerlik: ${esc(c.similarity.toFixed(3))} · Kaynak: ${esc(c.semantic_evidence_report_id.slice(0, 8))}` : ""}</p>`;
 }
-function renderReport(r, candidates, matching) {
-  const sameNeed = state.events.filter((e) => e.need === r.need);
+function decisionControl(reportVersion, eventId, eventVersion, decisionVersion, action) {
+  return `<form class="candidate-decision" data-event="${esc(eventId)}" data-event-version="${eventVersion}" data-report-version="${reportVersion}" data-decision-version="${decisionVersion}" data-action="${action}"><label>Karar gerekçesi<textarea name="reason" required minlength="3" maxlength="1000"></textarea></label><button type="submit" class="secondary">${action === "reject" ? "Öneriyi reddet" : "Yeniden değerlendirmeye aç"}</button></form>`;
+}
+function renderReport(r, candidates, matching, rejections) {
+  const sameNeed = state.events.filter((e) => e.need === r.need && !rejections.some(d => d.event_id === e.id && d.active));
   $("detail").innerHTML =
-    `<div class="detail-header"><div><span class="eyebrow">KAYNAK RAPOR</span><h2>${esc(r.location)} · ${esc(needs[r.need])}</h2><p class="small">${esc(languages[r.language])} · ${r.event_id ? "Bir ihtiyaç kaydına bağlı" : "Koordinatör kararı bekliyor"}</p></div><span class="badge">${esc(r.id.slice(0, 8))}</span></div><blockquote class="source" lang="${esc(r.language)}">${esc(r.text)}</blockquote>${metadata(r)}${r.event_id ? `<button class="secondary" data-event="${esc(r.event_id)}">Bağlı ihtiyaç kaydını aç</button><form id="split-form" class="decision-box"><h3>Yanlış bağlantıyı düzelt</h3><p class="small">Rapor ayrı, açık bir ihtiyaç kaydına taşınır. Önceki kararlar geçmişte kalır.</p><label for="split-reason">Ayırma gerekçesi</label><textarea id="split-reason" required minlength="3" maxlength="1000" rows="2"></textarea><div class="actions"><button class="secondary" type="submit">Raporu ayrı kayda taşı</button></div></form>` : `<h3 class="section-title">Benzer ihtiyaç kayıtları <span class="badge">${candidates.length}</span></h3><p class="small">${esc(matchingNote(matching))}</p>${excludedLocations(matching)}${matching?.excluded_groups?.length ? `<div class="decision-box"><strong>Grup kodu farklı: ayrı değerlendirilmesi gerekiyor</strong><p>${matching.excluded_groups.map(g => esc(g.group_ref)).join(", ")}</p></div>` : ""}${candidates.length ? candidates.map((c) => `<article class="candidate"><div class="record-top"><h3>${esc(c.event.location)} · ${esc(needs[c.event.need])} · ${esc(c.event.group_ref || "Grup bilinmiyor")}</h3>${badge(c.event.status)}</div>${candidateMethod(c)}<div class="flags">${c.flags.map((f) => `<span class="flag">${esc(flagLabels[f] || f)}</span>`).join("")}</div>${c.event.reports.map((source) => `<p class="evidence">${esc(languages[source.language])} · ${source.quantity === null ? "Miktar bilinmiyor" : `${esc(source.quantity)} ${esc(source.unit)}`} · ${esc(date(source.reported_at))}</p><blockquote class="source" lang="${esc(source.language)}">${esc(source.text)}</blockquote>`).join("")}<button class="secondary" type="button" data-candidate="${esc(c.event_id)}">Karar için bu kaydı seç</button></article>`).join("") : '<p class="small">Öneri bulunamadı. Ayrı bir ihtiyaç oluşturabilir veya konum adını doğrulayarak mevcut bir kayıt seçebilirsin.</p>'}<form id="decision-form" class="decision-box" data-version="${r.review_version}"><h3>Kararını kaydet</h3><label for="target-event">İşlem</label><select id="target-event"><option value="">Yeni, ayrı bir ihtiyaç oluştur</option>${sameNeed.map((e) => `<option value="${esc(e.id)}">Mevcut kayda bağla: ${esc(e.location)} · ${esc(statuses[e.status])} · ${esc(e.group_ref || "Grup bilinmiyor")} · ${esc(e.id.slice(0, 8))}</option>`).join("")}</select><label for="decision-reason">Karar gerekçesi</label><textarea id="decision-reason" required minlength="3" maxlength="1000" rows="2" placeholder="Hangi bilgiyi doğruladın?"></textarea><div class="actions"><button type="submit" class="primary">Kararı onayla ve kaydet</button></div><p class="small">Raporu bağlamak ihtiyaç durumunu otomatik değiştirmez.</p></form>`}`;
+    `<div class="detail-header"><div><span class="eyebrow">KAYNAK RAPOR</span><h2>${esc(r.location)} · ${esc(needs[r.need])}</h2><p class="small">${esc(languages[r.language])} · ${r.event_id ? "Bir ihtiyaç kaydına bağlı" : "Koordinatör kararı bekliyor"}</p></div><span class="badge">${esc(r.id.slice(0, 8))}</span></div><blockquote class="source" lang="${esc(r.language)}">${esc(r.text)}</blockquote>${metadata(r)}${r.event_id ? `<button class="secondary" data-event="${esc(r.event_id)}">Bağlı ihtiyaç kaydını aç</button><form id="split-form" class="decision-box"><h3>Yanlış bağlantıyı düzelt</h3><p class="small">Rapor ayrı, açık bir ihtiyaç kaydına taşınır. Önceki kararlar geçmişte kalır.</p><label for="split-reason">Ayırma gerekçesi</label><textarea id="split-reason" required minlength="3" maxlength="1000" rows="2"></textarea><div class="actions"><button class="secondary" type="submit">Raporu ayrı kayda taşı</button></div></form>` : `<h3 class="section-title">Benzer ihtiyaç kayıtları <span class="badge">${candidates.length}</span></h3><p class="small">${esc(matchingNote(matching))}</p>${excludedLocations(matching)}${matching?.excluded_groups?.length ? `<div class="decision-box"><strong>Grup kodu farklı: ayrı değerlendirilmesi gerekiyor</strong><p>${matching.excluded_groups.map(g => esc(g.group_ref)).join(", ")}</p></div>` : ""}${candidates.length ? candidates.map((c) => `<article class="candidate"><div class="record-top"><h3>${esc(c.event.location)} · ${esc(needs[c.event.need])} · ${esc(c.event.group_ref || "Grup bilinmiyor")}</h3>${badge(c.event.status, c.event.review_required)}</div>${candidateMethod(c)}${decisionControl(r.review_version, c.event_id, c.event.version, c.decision_version, "reject")}<div class="flags">${c.flags.map((f) => `<span class="flag">${esc(flagLabels[f] || f)}</span>`).join("")}</div>${c.event.reports.map((source) => `<p class="evidence">${esc(languages[source.language])} · ${source.quantity === null ? "Miktar bilinmiyor" : `${esc(source.quantity)} ${esc(source.unit)}`} · ${esc(date(source.reported_at))}</p><blockquote class="source" lang="${esc(source.language)}">${esc(source.text)}</blockquote>`).join("")}<button class="secondary" type="button" data-candidate="${esc(c.event_id)}">Karar için bu kaydı seç</button></article>`).join("") : '<p class="small">Öneri bulunamadı. Ayrı bir ihtiyaç oluşturabilir veya konum adını doğrulayarak mevcut bir kayıt seçebilirsin.</p>'}<form id="decision-form" class="decision-box" data-version="${r.review_version}"><h3>Kararını kaydet</h3><label for="target-event">İşlem</label><select id="target-event"><option value="">Yeni, ayrı bir ihtiyaç oluştur</option>${sameNeed.map((e) => `<option value="${esc(e.id)}">Mevcut kayda bağla: ${esc(e.location)} · ${esc(statuses[e.status])} · ${esc(e.group_ref || "Grup bilinmiyor")} · ${esc(e.id.slice(0, 8))}</option>`).join("")}</select><label for="decision-reason">Karar gerekçesi</label><textarea id="decision-reason" required minlength="3" maxlength="1000" rows="2" placeholder="Hangi bilgiyi doğruladın?"></textarea><div class="actions"><button type="submit" class="primary">Kararı onayla ve kaydet</button></div><p class="small">Raporu bağlamak ihtiyaç durumunu otomatik değiştirmez.</p></form>`}`;
+  if (!r.event_id && rejections.length) {
+    $("detail").insertAdjacentHTML("beforeend", `<h3>Öneri kararları</h3>${rejections.map(d => `<article class="decision-box"><strong>${esc(d.event_id.slice(0,8))} · ${d.active ? "Reddedildi" : d.action === "restore" ? "Yeniden değerlendirmeye açıldı" : "Kaynak değişti; ret güncel değil"}</strong><p>${esc(d.actor)} · ${esc(date(d.timestamp))}</p><p>${esc(d.reason)}</p>${d.action === "reject" && d.current_event_version ? decisionControl(r.review_version, d.event_id, d.current_event_version, d.version, "restore") : ""}</article>`).join("")}`);
+  }
   if (nonFactual(r)) $("decision-form")?.remove();
   $("detail").insertAdjacentHTML("beforeend", scopeReview(r));
 }
 function renderEvent(e) {
   $("detail").innerHTML =
-    `<div class="detail-header"><div><span class="eyebrow">İHTİYAÇ KAYDI</span><h2>${esc(e.location)} · ${esc(needs[e.need])}</h2><p class="small">${e.reports.length} kaynak rapor · Grup: ${esc(e.group_ref || "Bilinmiyor")} · Kayıt ${esc(e.id.slice(0, 8))}</p></div>${badge(e.status)}</div><h3>Bağlı kaynaklar</h3>${e.reports.length ? e.reports.map((r) => `<article class="source-card"><div class="record-top"><span class="badge">${esc(languages[r.language])}</span><span class="small">${esc(r.id.slice(0, 8))}</span></div><blockquote class="source" lang="${esc(r.language)}">${esc(r.text)}</blockquote>${metadata(r)}<button class="link-button" data-report="${esc(r.id)}">Raporu incele / bağlantıyı düzelt</button></article>`).join("") : '<p class="small">Bu kayda bağlı rapor kalmadı. Geçmiş kararlar aşağıda korunuyor.</p>'}${
+    `<div class="detail-header"><div><span class="eyebrow">İHTİYAÇ KAYDI</span><h2>${esc(e.location)} · ${esc(needs[e.need])}</h2><p class="small">${e.reports.length} kaynak rapor · Grup: ${esc(e.group_ref || "Bilinmiyor")} · Kayıt ${esc(e.id.slice(0, 8))}</p></div>${badge(e.status, e.review_required)}</div>${e.review_required ? `<p class="flag">Kaynak bağlantısı değişti. Önceki durum korunuyor ancak yeniden doğrulanmalı. Bağlı geçerli bir kaynağı seçip gerekçeyle durum kararı ver.</p>` : ""}<h3>Bağlı kaynaklar</h3>${e.reports.length ? e.reports.map((r) => `<article class="source-card"><div class="record-top"><span class="badge">${esc(languages[r.language])}</span><span class="small">${esc(r.id.slice(0, 8))}</span></div><blockquote class="source" lang="${esc(r.language)}">${esc(r.text)}</blockquote>${metadata(r)}<button class="link-button" data-report="${esc(r.id)}">Raporu incele / bağlantıyı düzelt</button></article>`).join("") : '<p class="small">Bu kayda bağlı rapor kalmadı. Geçmiş kararlar aşağıda korunuyor.</p>'}${
       e.reports.length
         ? `<form id="status-form" class="decision-box"><h3>İhtiyaç durumunu güncelle</h3><label for="event-status">Yeni durum</label><select id="event-status">${Object.entries(
             statuses,
@@ -434,12 +447,24 @@ $("detail").addEventListener("submit", (e) => {
   const form = e.target;
   run(async () => {
     const id = state.selected;
-    if (form.id === "review-form") {
+    if (form.classList.contains("candidate-decision")) {
+      await api(`/reports/${id}/candidate-decision`, "POST", {
+        event_id: form.dataset.event, action: form.dataset.action,
+        reason: new FormData(form).get("reason").trim(),
+        expected_review_version: Number(form.dataset.reportVersion),
+        expected_event_version: Number(form.dataset.eventVersion),
+        expected_decision_version: Number(form.dataset.decisionVersion),
+      });
+      await load(); await selectRecord(id);
+      notice("Öneri kararı ve gerekçesi kaydedildi.");
+    } else if (form.id === "review-form") {
       await api(`/reports/${id}/review`, "PATCH", {
         group_ref: $("review-group").value.trim() || null,
         statement_type: $("review-statement").value,
         reason: $("review-reason").value.trim(),
         expected_review_version: Number(form.dataset.version),
+        expected_event_version: form.dataset.eventVersion ? Number(form.dataset.eventVersion) : null,
+        detach_linked: Boolean($("review-detach")?.checked),
       });
       await load();
       await selectRecord(id);

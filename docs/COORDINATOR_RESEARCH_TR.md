@@ -40,8 +40,8 @@ Bunlar sentetik görevlerdir; her görevin beklenen kararını önceden ayrı bi
 - Sayısı değişen bir talepte otomatik toplama yapmadan belirsizliği değerlendir.
 - Su teslimatı geldiğinde bebek bezi ihtiyacını açık tut.
 - Eski mesaj tekrar geldiğinde kaydı gerekçesiz yeniden açma.
-- Yanlış girilmiş grup bilgisini düzeltmeyi dene. Mevcut sürümün bağlı raporda bunu desteklemediğini gözlem notuna yaz; başarı uydurma.
-- Alakasız öneriyi reddetme ihtiyacını gözle. Mevcut sürümde kalıcı reddetme işlemi olmadığını açıkça belirt.
+- Yanlış girilmiş grup bilgisini düzeltmeyi dene. Bağlantıyı kaldırma onayının ve eski ihtiyaçtaki yeniden inceleme işaretinin anlaşılır olup olmadığını gözle.
+- Alakasız öneriyi reddetme ihtiyacını gözle. Gerekçeli ret, yeniden değerlendirmeye açma ve kaynak değişince eski kararın güncelliğini kaybetmesi davranışlarını gözle.
 
 Mevcut olmayan işlevler için kullanıcıyı suçlama. Başaramadığı görev, ürün tasarımını değiştirecek bulgudur.
 
@@ -69,6 +69,6 @@ Mevcut olmayan işlevler için kullanıcıyı suçlama. Başaramadığı görev,
 
 | Bulgu | Kanıt türü | Mevcut davranış | Önerilen değişiklik | Kontrol yöntemi | Durum |
 |---|---|---|---|---|---|
-| Henüz görüşme yapılmadı | Kanıt yok | v0.4 prototipi | Görüşmeleri başlat | Somut iş akışı örneği | Bekliyor |
+| Henüz görüşme yapılmadı | Kanıt yok | v0.5 prototipi | Görüşmeleri başlat | Somut iş akışı örneği | Bekliyor |
 
 Bir görüşmede duyulan şeyi tüm koordinatörlere genelleme. 'Beğendi' bir kullanılabilirlik ölçümü değildir. Görüşme sonrası görev kapsamını koru, daralt, değiştir veya bırak kararını açıkça kaydet.

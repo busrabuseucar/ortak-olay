@@ -2,7 +2,7 @@
 
 Human-reviewed disaster needs tracking across Turkish, Greek and English reports.
 
-**Status: v0.4 coordinator prototype with reviewer-entered report scope and optional local semantic retrieval.** This repository implements the review workflow behind the Greece–Türkiye Hackathon proposal. It is not a deployed emergency service. Matching defaults to a structured baseline. An optional pretrained multilingual model adds candidates for human review; it has not been trained on disaster reports. A Turkish coordinator dashboard is included. Free-text multilingual extraction remains a future milestone.
+**Status: v0.5 coordinator prototype with reviewer-entered report scope and optional local semantic retrieval.** This repository implements the review workflow behind the Greece–Türkiye Hackathon proposal. It is not a deployed emergency service. Matching defaults to a structured baseline. An optional pretrained multilingual model adds candidates for human review; it has not been trained on disaster reports. A Turkish coordinator dashboard is included. Free-text multilingual extraction remains a future milestone.
 
 ## Start with the coordinator's task
 
@@ -18,8 +18,8 @@ The initial setting is a disaster-response exercise involving basic supplies and
 | Multilingual candidate retrieval | Optional pretrained local embeddings; structured baseline remains the default |
 | Free-text extraction and evidence spans | Planned; location/category and other structured facts are currently entered by the reviewer |
 | Missing information | Quantity/unit, event time and group can be unknown; location and need category are required. Missing location is not yet a supported intake workflow |
-| Correct report scope | Group/type can be corrected before linking only. Linked scope correction is a priority gap |
-| Reject a suggested relationship | No persistent rejection decision yet; choosing not to link does not record rejection |
+| Correct report scope | Group/type corrections are audited; linked corrections require explicit detachment and mark the old need for review |
+| Reject a suggested relationship | Reasoned rejection/restore is persisted per report-event pair; evidence changes invalidate prior rejection |
 | Resolve irrelevant messages | Explicit non-factual types block need decisions, but remain in the pending queue; reversible dismissal is planned |
 | CSV exercise imports | Planned; manual entry and the scripted synthetic walkthrough exist |
 | Independent evaluation and coordinator study | Pending; the existing 18-pair check is a development fixture |
@@ -30,7 +30,7 @@ The [development check](evaluation/README.md) reports both useful matches and er
 ### Next work and evidence
 
 1. [Coordinator interview and recording guide (Turkish)](docs/COORDINATOR_RESEARCH_TR.md): establish the current workflow before extending scope.
-2. [Prioritized delivery roadmap](ROADMAP.md): close correction and rejection gaps before broader automation.
+2. [Prioritized delivery roadmap](ROADMAP.md): validate recovery workflows with coordinators before broader automation.
 3. [Proposed evaluation protocol](docs/VALIDATION_PLAN.md): separate development fixtures, independent matching tests and user tasks.
 
 These documents contain plans and blank recording templates, not completed interviews, recruited partners or achieved targets. No working-demo video or screenshot is linked yet; the executable walkthrough and setup below are the current demonstration materials.
@@ -39,7 +39,7 @@ These documents contain plans and blank recording templates, not completed inter
 
 - Persist original reports, source labels, language, event time and receipt time in SQLite. Record optional group references and reviewer-assigned message types.
 - Exclude explicitly hypothetical/general-information reports from suggestions and need decisions. Prevent links between explicitly conflicting group references, including references in already linked sources.
-- Correct unlinked report scope with a reason, version check and visible audit history, preserving original text.
+- Correct report scope with reason, version checks and visible audit history; linked corrections explicitly detach and flag the old event for review.
 - Suggest potentially related needs by manually entered location and need category, with a 24-hour event-time filter when times are known. Optionally add semantic candidates across Turkish, English and Greek, with source-linked similarity and different-location warnings.
 - Display quantity disagreements, incompatible units, missing timestamps and possible verbatim reposts.
 - Require an authenticated reviewer to create an event, link a report, split a mistaken grouping or change a need's status.
@@ -116,7 +116,13 @@ Reports marked `hypothetical` or `general_info` remain available for inspection 
 
 An event inherits its founding report's group reference. A known incoming group must not contradict the event's reference or any linked source's known reference. Such candidates appear as excluded with a reason, and the API rejects a manual link too. Unknown scope is not inferred or silently filled: it produces warnings and still permits a human decision. Group references are intended to be consistently assigned within the operating context; the prototype has no global group registry.
 
-`PATCH /reports/{id}/review` updates both scope fields of an **unlinked** report. Supply both fields, a reason and `expected_review_version`. The full original report text stays unchanged. `GET /reports/{id}` returns visible review history with actor, before/after values, reason and time. Linked scope is immutable in this version; correcting linked annotations and event scope is a future workflow. The UI sends `expected_review_version` when creating/linking; it is optional for older API clients. All decisions still enforce the current type/group rules server-side.
+`PATCH /reports/{id}/review` updates group/type with a reason and `expected_review_version`. For a linked report, also supply `detach_linked: true` and `expected_event_version`. This explicitly removes the link, preserves the source and old decisions, and marks the former event `review_required`. The prior status and event group label are retained as historical assertions, not silently rewritten. The report returns to the unlinked queue. This conservative exercise workflow requires coordinator validation; it is not an agreed field procedure.
+
+Events requiring review are visibly flagged and excluded from the completed counter. A new status decision using currently linked factual evidence, a reason and the current event version clears the flag. An empty event cannot be reaffirmed without new linked evidence. Splitting also marks the former event for review. This does not automatically reopen fulfilled needs.
+
+`POST /reports/{id}/candidate-decision` records `reject` or `restore` for an unlinked report and event. Supply the reason plus `expected_review_version`, `expected_event_version` and `expected_decision_version` (0 for the first decision). Active rejection hides that candidate from suggestions and prevents manual linking until restored. Changes to report scope or event evidence/version make the rejection stale, visible as such, and allow reconsideration; old audit entries remain. Rejection applies to one relationship, not to the report itself. Reversible report dismissal remains unimplemented.
+
+`GET /reports/{id}` includes scope and candidate decision history. Concurrent stale edits return 409; reload before deciding. Original text, location and need category are not editable through the scope endpoint. Event group labels are not automatically inferred from corrected sources.
 
 Existing SQLite databases receive additive columns on startup. Original text, links, status, event versions and audit history remain intact; old reports start with unknown type and no group. The migration is repeatable and tested on a legacy database. There is no automatic backfill or classification of old records.
 
@@ -175,7 +181,8 @@ Both suites run in GitHub Actions. The browser dependency is used only for testi
 | POST | `/reports` | Submit one structured need report |
 | GET | `/reports?pending=true` | Review unlinked reports |
 | GET | `/reports/{id}` | Read report and scope-review history |
-| PATCH | `/reports/{id}/review` | Correct unlinked scope with reason and version |
+| PATCH | `/reports/{id}/review` | Correct scope; explicitly detach linked reports and flag the old event |
+| POST | `/reports/{id}/candidate-decision` | Reject or restore a relationship with reason and version guards |
 | GET | `/reports/{id}/suggestions` | Inspect candidate methods, source evidence and flags |
 | POST | `/reports/{id}/new-event` | Approve a separate need event |
 | POST | `/reports/{id}/link` | Link a report after review |
@@ -197,7 +204,7 @@ All data endpoints require a bearer token. `/health` and API schema documentatio
 
 ## Next milestones
 
-See [ROADMAP.md](ROADMAP.md). The coordinator interface now connects incoming reports, event details and review decisions. Optional multilingual matching now has a reproducible development comparison. Next, validate the review workflow with a coordinator, then build source-linked extraction and independently labelled evaluation cases. Scope rules now work with explicit human annotations; automatic group/statement extraction is not implemented.
+See [ROADMAP.md](ROADMAP.md). The coordinator interface now connects incoming reports, event details and review decisions. Optional multilingual matching now has a reproducible development comparison. Next, validate the recovery and review workflows with a coordinator, then build source-linked extraction and independently labelled evaluation cases. Scope rules now work with explicit human annotations; automatic group/statement extraction is not implemented.
 
 ## Team
 

@@ -47,10 +47,20 @@ class Decision(Input):
 class Review(Scope):
     reason: str = Field(min_length=3, max_length=1000)
     expected_review_version: int = Field(ge=1)
+    expected_event_version: int | None = Field(default=None, ge=1)
+    detach_linked: bool = False
 
 
 class ReportDecision(Decision):
     expected_review_version: int | None = Field(default=None, ge=1)
+
+
+class CandidateDecision(Decision):
+    event_id: str = Field(min_length=1)
+    action: Literal["reject", "restore"]
+    expected_review_version: int = Field(ge=1)
+    expected_event_version: int = Field(ge=1)
+    expected_decision_version: int = Field(ge=0)
 
 
 class Link(ReportDecision):
@@ -146,7 +156,7 @@ def create_app(db_path=None, reviewers=None, encoder=None):
         raise HTTPException(401, "Valid reviewer token required", headers={"WWW-Authenticate": "Bearer"})
 
     api = FastAPI(
-        title="Ortak Olay", version="0.4.0",
+        title="Ortak Olay", version="0.5.0",
         description="Synthetic-exercise prototype. Structured reports, baseline suggestions and human decisions. Optional local multilingual model for candidate retrieval; no operational validation.",
     )
 
@@ -170,7 +180,7 @@ def create_app(db_path=None, reviewers=None, encoder=None):
 
     @api.get("/health")
     def health():
-        return {"status": "ok", "version": "0.4.0", "stage": "local-prototype"}
+        return {"status": "ok", "version": "0.5.0", "stage": "local-prototype"}
 
     @api.post("/reports", status_code=201)
     def add_report(item: Report, actor=Depends(reviewer)):
@@ -198,8 +208,9 @@ def create_app(db_path=None, reviewers=None, encoder=None):
     def report_detail(report_id: str, actor=Depends(reviewer)):
         with database() as connection:
             result = get(connection, "reports", report_id)
+            result["linked_event_version"] = get(connection, "events", result["event_id"])["version"] if result["event_id"] else None
             result["review_history"] = [dict(r) for r in connection.execute(
-                "SELECT * FROM audit WHERE report_id=? AND action='report_reviewed' ORDER BY sequence", (report_id,))]
+                "SELECT * FROM audit WHERE report_id=? AND action IN ('report_reviewed','candidate_reject','candidate_restore') ORDER BY sequence", (report_id,))]
             return result
 
     @api.patch("/reports/{report_id}/review")
@@ -207,9 +218,17 @@ def create_app(db_path=None, reviewers=None, encoder=None):
         with database(True) as connection:
             report = get(connection, "reports", report_id)
             if report["event_id"]:
-                raise HTTPException(409, "Linked report scope cannot be edited")
+                event = get(connection, "events", report["event_id"])
+                if not decision.detach_linked or decision.expected_event_version != event["version"]:
+                    raise HTTPException(409, "Confirm detachment with current event version")
             if report["review_version"] != decision.expected_review_version:
                 raise HTTPException(409, "Report review changed; refresh before deciding")
+            if report["event_id"]:
+                old_event_id = report["event_id"]
+                connection.execute("UPDATE reports SET event_id=NULL WHERE id=?", (report_id,))
+                connection.execute("UPDATE events SET review_required=1,version=version+1 WHERE id=?", (old_event_id,))
+                log(connection, actor, "scope_correction_detached", report_id=report_id, event_id=old_event_id,
+                    reason=decision.reason, previous_status=event["status"], requires_status_review=True)
             before = {k: report[k] for k in ("group_ref", "statement_type")}
             after = decision.model_dump(include={"group_ref", "statement_type"})
             connection.execute("UPDATE reports SET group_ref=?,statement_type=?,review_version=review_version+1 WHERE id=?",
@@ -239,8 +258,46 @@ def create_app(db_path=None, reviewers=None, encoder=None):
                 event = dict(row)
                 linked = [dict(r) for r in connection.execute("SELECT * FROM reports WHERE event_id=?", (event["id"],))]
                 groups.append((event, linked))
+            decisions = [dict(r) for r in connection.execute("SELECT * FROM candidate_decisions WHERE report_id=?", (report_id,))]
         # Release the database connection before model inference.
-        return suggest(report, groups, encoder=encoder)
+        result = suggest(report, groups, encoder=encoder)
+        versions = {e['id']: e['version'] for e, _ in groups}
+        result['review_version'] = report['review_version']
+        result['rejections'] = []
+        active = set()
+        for d in decisions:
+            d['current_event_version'] = versions.get(d['event_id'])
+            d['active'] = d['action'] == 'reject' and d['report_version'] == report['review_version'] and d['event_version'] == d['current_event_version']
+            if d['active']:
+                active.add(d['event_id'])
+            result['rejections'].append(d)
+        for c in result['candidates']:
+            c['decision_version'] = next((d['version'] for d in decisions if d['event_id'] == c['event_id']), 0)
+        result['candidates'] = [c for c in result['candidates'] if c['event_id'] not in active]
+        return result
+
+    @api.post("/reports/{report_id}/candidate-decision")
+    def candidate_decision(report_id: str, decision: CandidateDecision, actor=Depends(reviewer)):
+        with database(True) as connection:
+            report = get(connection, "reports", report_id)
+            event = get(connection, "events", decision.event_id)
+            if report['event_id'] or report['need'] != event['need']:
+                raise HTTPException(409, "Candidate decision requires unlinked report and same need")
+            if report['review_version'] != decision.expected_review_version or event['version'] != decision.expected_event_version:
+                raise HTTPException(409, "Candidate evidence changed; refresh")
+            previous = connection.execute("SELECT * FROM candidate_decisions WHERE report_id=? AND event_id=?", (report_id, event['id'])).fetchone()
+            version = previous['version'] if previous else 0
+            if version != decision.expected_decision_version or (decision.action == 'restore' and (not previous or previous['action'] != 'reject')):
+                raise HTTPException(409, "Candidate decision changed; refresh")
+            connection.execute("""INSERT INTO candidate_decisions(report_id,event_id,action,reason,actor,timestamp,report_version,event_version,version)
+                VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(report_id,event_id) DO UPDATE SET
+                action=excluded.action,reason=excluded.reason,actor=excluded.actor,timestamp=excluded.timestamp,
+                report_version=excluded.report_version,event_version=excluded.event_version,version=excluded.version""",
+                (report_id,event['id'],decision.action,decision.reason,actor,now(),report['review_version'],event['version'],version+1))
+            log(connection, actor, 'candidate_'+decision.action, report_id=report_id,event_id=event['id'],
+                reason=decision.reason, report_version=report['review_version'],event_version=event['version'],decision_version=version+1)
+            return {'version':version+1,'action':decision.action}
+
 
     def check_review_version(report, decision):
         if decision.expected_review_version is not None and report['review_version'] != decision.expected_review_version:
@@ -258,7 +315,7 @@ def create_app(db_path=None, reviewers=None, encoder=None):
         connection.execute("UPDATE reports SET event_id=? WHERE id=?", (event_id, report["id"]))
         log(connection, actor, "report_split" if split else "event_created", report_id=report["id"], event_id=event_id, previous_event_id=old, reason=reason)
         if old:
-            connection.execute("UPDATE events SET version=version+1 WHERE id=?", (old,))
+            connection.execute("UPDATE events SET review_required=1,version=version+1 WHERE id=?", (old,))
             log(connection, actor, "report_removed_by_split", report_id=report["id"], event_id=old, new_event_id=event_id, reason=reason)
         return get(connection, "events", event_id)
 
@@ -278,6 +335,9 @@ def create_app(db_path=None, reviewers=None, encoder=None):
             e = get(connection, "events", decision.event_id)
             require_factual(report)
             check_review_version(report, decision)
+            rejection = connection.execute("SELECT * FROM candidate_decisions WHERE report_id=? AND event_id=?", (report_id,e['id'])).fetchone()
+            if rejection and rejection['action'] == 'reject' and rejection['report_version'] == report['review_version'] and rejection['event_version'] == e['version']:
+                raise HTTPException(409, "Restore rejected candidate before linking")
             linked = [dict(r) for r in connection.execute("SELECT * FROM reports WHERE event_id=?", (e["id"],))]
             if group_conflict(report, e, linked):
                 raise HTTPException(422, "Different group references must remain separate")
@@ -309,8 +369,8 @@ def create_app(db_path=None, reviewers=None, encoder=None):
                 raise HTTPException(422, "Evidence report must be linked to this event")
             if e["version"] != decision.expected_version:
                 raise HTTPException(409, "Event changed; refresh before deciding")
-            connection.execute("UPDATE events SET status=?,version=version+1 WHERE id=?", (decision.status, event_id))
-            log(connection, actor, "status_changed", report_id=evidence["id"], event_id=event_id, before=e["status"], after=decision.status, reason=decision.reason)
+            connection.execute("UPDATE events SET status=?,review_required=0,version=version+1 WHERE id=?", (decision.status, event_id))
+            log(connection, actor, "status_changed", report_id=evidence["id"], event_id=event_id, before=e["status"], after=decision.status, reason=decision.reason, cleared_review_required=bool(e["review_required"]))
             return get(connection, "events", event_id)
 
     return api

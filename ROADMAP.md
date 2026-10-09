@@ -1,6 +1,6 @@
 # Development roadmap
 
-Updated 2026-10-09. Application language does not establish implementation status. The existing application remains v0.4; this documentation revision adds no runtime capability.
+Updated 2026-10-09. Application language does not establish implementation status. The application is now v0.5: linked correction and persistent relationship rejection are implemented for exercises; user validation remains pending.
 
 ## Existing foundation
 
@@ -14,19 +14,19 @@ Establish the current tools, decision owner, recurring ambiguity, information re
 
 Acceptance: permissioned, anonymised notes; a concrete existing workflow; an explicit keep/change/stop decision and the product changes it supports. If interviews are unavailable, keep the exercise prototype label and report the dependency rather than inventing validation.
 
-## Priority 2 - Make review decisions recoverable (not implemented)
+## Priority 2 - Validate recovery decisions (partly implemented)
 
 ### Linked scope correction
 
-Allow a reviewer to correct group/type after a report is linked without altering its original text. Design the affected report/event transaction first: preserve the old values and reason, detect stale edits, and surface implications for group consistency and earlier status evidence. Simply splitting a report into a new event does not make its scope editable today.
+Implemented: a linked group/type correction requires explicit detachment and both report/event version checks. The old event keeps its status and group label, but is flagged for human review; source text and all decision history remain. A fresh status decision with currently linked evidence clears that flag. An empty event requires new evidence first. This conservative prototype policy must be reviewed with coordinators before a pilot.
 
-Acceptance: a wrongly classified or grouped linked report can be corrected through the UI; conflicts and affected evidence are explicitly handled; no history is silently erased; another reviewer's stale correction is rejected. The final policy for reopening affected needs must be agreed with coordinators before implementation.
+Acceptance covered by tests: linked correction, immutable source text, stale-edit rejection, removed-evidence rejection and explicit status revalidation. Next: observe how coordinators interpret a historical fulfilled status with a review flag and whether a more specific recovery workflow is needed.
 
 ### Persistent candidate rejection and reversible dismissal
 
-Record a rejection against the report-event relationship, with actor, reason and evidence version. Distinguish rejected relationships from irrelevant reports. Provide a reversible way to resolve irrelevant reports out of the pending queue while preserving source/history.
+Implemented: reasoned rejection/restoration per report-event pair with actor, evidence versions and decision history. Unchanged active rejections block manual linking; changed report/event versions make the old decision visibly stale. Backend and browser journeys cover rejection, restoration and persistence/stale behavior.
 
-Acceptance: a rejected unchanged suggestion is identifiable after reload; new evidence can trigger explicit reconsideration; dismiss/restore actions are audited; a factual unresolved need is not silently discarded. Confirm this interaction with users.
+Still pending: reversible dismissal of irrelevant reports from the queue. Rejection of a relationship is not dismissal of a report. Validate wording and reconsideration triggers with users before expanding this behavior.
 
 ### Unknown location at intake
 
