@@ -1,5 +1,11 @@
 # Ortak Olay
 
+## Canlı demonun kapsamı
+
+[Demoyu aç](https://ortak-olay-tatbikat.sleek-brush-8818.chatgpt.site)
+
+Bu bağlantı hazırlanmış kartlarla çalışan bağımsız tarayıcı tatbikatıdır. Kararlar bu tarayıcıda saklanır; Python API, semantic model veya İHH sistemlerine bağlı değildir. Bu depodaki koordinatör uygulaması ve isteğe bağlı gerçek model çalıştırması ayrı kurulumla denenir.
+
 Human-reviewed disaster needs tracking across Turkish, Greek and English reports.
 
 **Status: v0.5 coordinator prototype with reviewer-entered report scope and optional local semantic retrieval.** This repository implements the review workflow behind the Greece–Türkiye Hackathon proposal. It is not a deployed emergency service. Matching defaults to a structured baseline. An optional pretrained multilingual model adds candidates for human review; it has not been trained on disaster reports. A Turkish coordinator dashboard is included. Free-text multilingual extraction remains a future milestone.
