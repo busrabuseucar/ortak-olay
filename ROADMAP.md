@@ -56,4 +56,4 @@ Acceptance: an agreed supervised exercise/pilot plan and its technical gates. No
 
 ## Portfolio evidence
 
-Publish a short reproducible demo and clear current/planned feature list. Attribute actual contributions and AI assistance accurately. Never turn prototype tests, finalist status or planned roles into claims of operational impact or completed team authorship.
+Publish a short reproducible demo and clear current/planned feature list. Document implementation decisions and validation evidence accurately. Never turn prototype tests, finalist status or planned roles into claims of operational impact or completed team authorship.
