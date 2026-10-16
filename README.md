@@ -224,3 +224,7 @@ See [ROADMAP.md](ROADMAP.md). The coordinator interface now connects incoming re
 - [FastAPI security documentation](https://fastapi.tiangolo.com/tutorial/security/first-steps/)
 
 The optional pretrained model is listed under Apache-2.0 by its provider; that does not license this application. No open-source license has been selected yet. External reuse requires permission from the project owner until a license is selected.
+
+## İşletim
+
+[İşletim ve sürüm doğrulama](docs/OPERATIONS.md) — kurulum, veri saklama, yayın, geri dönüş ve doğrulama kapsamı.
