@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 import secrets
 import sqlite3
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import uuid4
 
 from app.matching import LocalSemanticEncoder, suggest
@@ -17,7 +17,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
 
 class Input(BaseModel):
@@ -30,7 +30,7 @@ class Scope(Input):
 
 
 class Report(Scope):
-    text: str = Field(min_length=1, max_length=5000)
+    text: Annotated[str, StringConstraints(strip_whitespace=False)] = Field(min_length=1, max_length=5000)
     language: Literal["tr", "el", "en"]
     source: str = Field(min_length=1, max_length=200)
     location: str = Field(min_length=1, max_length=200)
@@ -38,6 +38,14 @@ class Report(Scope):
     quantity: int | None = Field(default=None, ge=0, le=1000000, strict=True)
     unit: str | None = Field(default=None, min_length=1, max_length=50)
     reported_at: AwareDatetime | None = None
+
+
+    @field_validator("text")
+    @classmethod
+    def nonblank_original(cls, value):
+        if not value.strip():
+            raise ValueError("Original report text must not be blank")
+        return value
 
 
 class Decision(Input):
@@ -63,7 +71,12 @@ class CandidateDecision(Decision):
     expected_decision_version: int = Field(ge=0)
 
 
+class Split(ReportDecision):
+    expected_event_version: int | None = Field(default=None, ge=1)
+
+
 class Link(ReportDecision):
+    expected_event_version: int | None = Field(default=None, ge=1)
     event_id: str = Field(min_length=1)
 
 
@@ -334,6 +347,8 @@ def create_app(db_path=None, reviewers=None, encoder=None):
             report = get(connection, "reports", report_id)
             e = get(connection, "events", decision.event_id)
             require_factual(report)
+            if decision.expected_event_version is not None and e["version"] != decision.expected_event_version:
+                raise HTTPException(409, "Event changed; refresh before deciding")
             check_review_version(report, decision)
             rejection = connection.execute("SELECT * FROM candidate_decisions WHERE report_id=? AND event_id=?", (report_id,e['id'])).fetchone()
             if rejection and rejection['action'] == 'reject' and rejection['report_version'] == report['review_version'] and rejection['event_version'] == e['version']:
@@ -351,12 +366,15 @@ def create_app(db_path=None, reviewers=None, encoder=None):
             return get(connection, "events", e["id"])
 
     @api.post("/reports/{report_id}/split", status_code=201)
-    def split(report_id: str, decision: ReportDecision, actor=Depends(reviewer)):
+    def split(report_id: str, decision: Split, actor=Depends(reviewer)):
         with database(True) as connection:
             report = get(connection, "reports", report_id)
             if not report["event_id"]:
                 raise HTTPException(409, "Unlinked report; use new-event")
             check_review_version(report, decision)
+            event = get(connection, "events", report["event_id"])
+            if decision.expected_event_version is not None and event["version"] != decision.expected_event_version:
+                raise HTTPException(409, "Event changed; refresh before deciding")
             return new_event(connection, report, actor, decision.reason, split=True)
 
     @api.patch("/events/{event_id}/status")

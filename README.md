@@ -162,7 +162,7 @@ On the same 18 synthetic, author-labelled pairs, the baseline retrieves 4 of 9 i
 python -m pytest -q
 ```
 
-The suite covers the application scenario, access control, status conflicts, evidence constraints, split history, category separation, time windows, validation, Greek text preservation, scope rules, audited classification correction, legacy migration and persistence. Passing these functional tests does not measure matching precision, clinical outcomes or disaster-response impact.
+The backend suite contains **54 tests**. It covers the application scenario, access control, status conflicts, evidence constraints, split history, category separation, time windows, validation, Greek text preservation, scope rules, audited classification correction, legacy migration and persistence. Passing these functional tests does not measure matching precision, clinical outcomes or disaster-response impact.
 
 The optional browser regression starts an isolated local server and temporary database. It exercises login, report creation, conflicts, linking, delivery status, splitting, stale decisions, safe text rendering, mobile layout, validation and logout through the interface:
 
@@ -172,7 +172,7 @@ python -m playwright install chromium
 python -m pytest -q browser_tests
 ```
 
-Both suites run in GitHub Actions. The browser dependency is used only for testing; it is not required to run the application.
+The browser suite contains **4 journeys**, including a second-reviewer change between opening a record and submitting a link/split decision. Existing journeys also check mobile layout. Both suites run in GitHub Actions. The browser dependency is used only for testing; it is not required to run the application.
 
 ## API
 
@@ -193,9 +193,15 @@ Both suites run in GitHub Actions. The browser dependency is used only for testi
 
 All data endpoints require a bearer token. `/health` and API schema documentation are public locally. `quantity` and `unit` must be entered together or both omitted. Each report belongs to at most one event. One message covering several needs is represented as several reports carrying the same source text.
 
+### Concurrent decisions
+
+The coordinator interface sends the report review version for new-event/link/split decisions and the displayed event version for link/split. If supplied versions no longer match, the transaction returns `409` without adding a link, event or audit row. Refresh and review the changed evidence before retrying. Status and scope-correction operations retain their existing required version checks.
+
+For compatibility with the original scripted API, new-event/link/split report-version guards and link/split event-version guards remain optional in direct API requests. Clients that omit these fields do **not** get stale-screen protection; integrations should send `expected_review_version` and, for link/split, `expected_event_version`. This prototype does not claim universal concurrency protection for legacy clients.
+
 ## Data and decisions
 
-- Original text is immutable through the API. Mistaken links can be split with an audit trail.
+- Original text is preserved verbatim, including leading/trailing whitespace, and is immutable through the API. Whitespace-only messages are rejected. Mistaken links can be split with an audit trail.
 - An event represents a location, one need category and an optional group reference. Quantities remain source claims; the prototype never silently selects a single true quantity.
 - Reviewers may link different location labels when they confirm an alias; the baseline suggests exact labels, ignoring case. Semantic mode may suggest different labels, always with a location warning.
 - Splitting creates an open event. The previous event's status remains unchanged and its historical decisions remain visible, even if it has no remaining reports.

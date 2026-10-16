@@ -7,3 +7,6 @@ data/
 *.db
 *.db-*
 dist/
+.env.*
+playwright-report/
+test-results/
