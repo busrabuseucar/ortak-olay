@@ -208,20 +208,13 @@ The [first coordinator exercise package](docs/exercise/README.md) provides six T
 
 See [ROADMAP.md](ROADMAP.md). The coordinator interface now connects incoming reports, event details and review decisions. Optional multilingual matching now has a reproducible development comparison. Next, validate the recovery and review workflows with a coordinator, then build source-linked extraction and independently labelled evaluation cases. Scope rules now work with explicit human annotations; automatic group/statement extraction is not implemented.
 
-## Team
+## Developer
 
-Planned project responsibilities from the application:
-
-- Büşra Buse Uçar: project lead, backend and data flow.
-- Aliyenur Bulduk: applied AI and application integration.
-- Sıla Yıldız: needs categories and evaluation cases.
-- Şeyma Öksüzoğlu: product design and review interface.
-
-These are planned responsibilities, not claims that all members authored the current implementation. This initial backend was prepared with AI assistance and needs team review before adopting it as maintained code.
+**Büşra Buse Uçar** — project development, backend and data flow.
 
 ## Development references
 
 - [FastAPI testing documentation](https://fastapi.tiangolo.com/tutorial/testing/)
 - [FastAPI security documentation](https://fastapi.tiangolo.com/tutorial/security/first-steps/)
 
-The optional pretrained model is listed under Apache-2.0 by its provider; that does not license this application. No open-source license has been selected yet. Agree on licensing and team ownership before inviting external reuse.
+The optional pretrained model is listed under Apache-2.0 by its provider; that does not license this application. No open-source license has been selected yet. External reuse requires permission from the project owner until a license is selected.
